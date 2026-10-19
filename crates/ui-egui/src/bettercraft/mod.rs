@@ -1,7 +1,8 @@
 //! BetterCraft: everything this fork adds to the upstream `storytold/craft-launcher`.
 //!
 //! - `icons`: the original programs' icons, shown beside each Craft icon in the compact rows.
-//! - `machine_icons`: those icons, and optionally names, on the installed `.app` bundles (macOS).
+//! - `machine_icons`: those icons, and optionally names, on the installed `.app` bundles (macOS),
+//!   with `dock_icon` for the icon the Dock shows while an app starts and runs.
 //! - `compact`: a denser, quieter grid of apps (always on).
 //!
 //! Upstream files only carry one-line hooks into this module (`lib.rs`, `views.rs`), so the fork
@@ -17,6 +18,8 @@ use crate::LauncherUi;
 use crate::widgets;
 
 pub(crate) mod compact;
+#[cfg(target_os = "macos")]
+mod dock_icon;
 pub(crate) mod icons;
 mod machine_icons;
 

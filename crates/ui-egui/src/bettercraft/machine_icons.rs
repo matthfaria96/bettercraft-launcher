@@ -15,6 +15,15 @@
 
 use crate::LauncherUi;
 
+/// What one installed app carries on this Mac.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct AppState {
+    /// The original program's icon everywhere: Finder, the bundle and the Dock.
+    pub icons: bool,
+    /// The original program's name.
+    pub names: bool,
+}
+
 /// What the last pass found, for the switch's label and tooltip.
 #[derive(Clone, Debug, Default)]
 pub(super) struct Status {
@@ -25,6 +34,8 @@ pub(super) struct Status {
     pub names: usize,
     /// Installed `.app` bundles.
     pub total: usize,
+    /// Each installed app's id and what it carries, for the badge on its row.
+    pub apps: Vec<(String, AppState)>,
     pub error: Option<String>,
 }
 
@@ -41,6 +52,11 @@ pub(super) fn status() -> Status {
 #[cfg(not(target_os = "macos"))]
 pub(super) fn sync(_launcher: &LauncherUi, _toggled: bool) {}
 
+/// What the installed app `id` carries, once a pass has looked at it.
+pub(crate) fn app_state(id: &str) -> Option<AppState> {
+    status().apps.into_iter().find(|(app, _)| app == id).map(|(_, state)| state)
+}
+
 #[cfg(not(target_os = "macos"))]
 pub(super) fn status() -> Status {
     Status::default()
@@ -54,7 +70,7 @@ mod imp {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::time::{Duration, Instant};
 
-    use super::Status;
+    use super::{AppState, Status};
     use crate::LauncherUi;
     use crate::bettercraft::MacMode;
 
@@ -99,16 +115,32 @@ mod imp {
         }
         std::thread::spawn(move || {
             let mut error = None;
+            let mut dock_changed = false;
             for (id, bundle) in &apps {
-                if let Err(e) = apply(id, bundle, mode) {
-                    log::warn!("BetterCraft: couldn't change the icon of {}: {e}", bundle.display());
-                    error = Some(format!("{}: {e}", bundle.display()));
+                match apply(id, bundle, mode) {
+                    Ok(changed) => dock_changed |= changed,
+                    Err(e) => {
+                        log::warn!("BetterCraft: couldn't change the icon of {}: {e}", bundle.display());
+                        error = Some(format!("{}: {e}", bundle.display()));
+                    }
                 }
             }
-            let icons = apps.iter().filter(|(_, b)| has_custom_icon(b)).count();
-            let names = apps.iter().filter(|(_, b)| has_original_name(b)).count();
+            // The Dock caches icons: restarting it (a second's blink) makes it read them again.
+            // A Craft App that is open keeps its old Dock icon until it is opened again.
+            if dock_changed {
+                let _ = Command::new("/usr/bin/killall").arg("Dock").status();
+            }
+            let states: Vec<(String, AppState)> = apps
+                .iter()
+                .map(|(id, b)| {
+                    let icons = has_custom_icon(b) && crate::bettercraft::dock_icon::is_patched(b);
+                    (id.clone(), AppState { icons, names: has_original_name(b) })
+                })
+                .collect();
+            let icons = states.iter().filter(|(_, s)| s.icons).count();
+            let names = states.iter().filter(|(_, s)| s.names).count();
             if let Ok(mut s) = STATUS.lock() {
-                *s = Some(Status { busy: false, icons, names, total: apps.len(), error });
+                *s = Some(Status { busy: false, icons, names, total: apps.len(), error, apps: states });
             }
             BUSY.store(false, Ordering::Release);
         });
@@ -128,17 +160,33 @@ mod imp {
         bundle.join("Icon\r").exists()
     }
 
-    fn apply(id: &str, bundle: &Path, mode: MacMode) -> Result<(), String> {
+    /// Brings one bundle in line with `mode`. Returns true when its Dock icon changed.
+    fn apply(id: &str, bundle: &Path, mode: MacMode) -> Result<bool, String> {
         if !bundle.is_dir() {
-            return Ok(());
+            return Ok(false);
         }
-        if mode.names() != has_original_name(bundle) {
-            set_name(id, bundle, mode.names())?;
+        let names = mode.names() != has_original_name(bundle);
+        let dock = mode.icons() != crate::bettercraft::dock_icon::is_patched(bundle);
+        if names || dock {
+            // codesign refuses a bundle with a custom icon: clear it, sign, then put it back.
+            if has_custom_icon(bundle) {
+                set_icon(id, bundle, false)?;
+            }
+            let _ = std::fs::remove_file(bundle.join("Icon\r"));
+            run("/usr/bin/xattr", &["-cr"], bundle)?;
+            if names {
+                set_name(id, bundle, mode.names())?;
+            }
+            if dock {
+                crate::bettercraft::dock_icon::set(id, bundle, mode.icons())?;
+            }
+            run("/usr/bin/codesign", &["--force", "--deep", "--preserve-metadata=entitlements,flags", "--sign", "-"], bundle)?;
+            run("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister", &["-f"], bundle)?;
         }
         if mode.icons() != has_custom_icon(bundle) {
             set_icon(id, bundle, mode.icons())?;
         }
-        Ok(())
+        Ok(dock)
     }
 
     fn set_icon(id: &str, bundle: &Path, on: bool) -> Result<(), String> {
@@ -167,14 +215,9 @@ mod imp {
         std::fs::read_to_string(strings_file(bundle, "Base")).is_ok_and(|s| s.starts_with(MARK))
     }
 
+    /// Writes (or removes) the display name files; the caller signs the bundle after.
     fn set_name(id: &str, bundle: &Path, on: bool) -> Result<(), String> {
         let name = super::super::icons::name(id).ok_or_else(|| format!("no original name for {id}"))?;
-        // codesign refuses a bundle with a custom icon; `apply` puts it back afterwards.
-        if has_custom_icon(bundle) {
-            set_icon(id, bundle, false)?;
-        }
-        let _ = std::fs::remove_file(bundle.join("Icon\r"));
-        run("/usr/bin/xattr", &["-cr"], bundle)?;
         let plist = bundle.join("Contents/Info.plist");
         if on {
             let body = format!("{MARK}\n\"CFBundleDisplayName\" = \"{name}\";\n\"CFBundleName\" = \"{name}\";\n");
@@ -204,9 +247,6 @@ mod imp {
             }
             let _ = run("/usr/libexec/PlistBuddy", &["-c", "Delete :LSHasLocalizedDisplayName"], &plist);
         }
-        run("/usr/bin/codesign", &["--force", "--deep", "--preserve-metadata=entitlements,flags", "--sign", "-"], bundle)?;
-        run("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister", &["-f"], bundle)?;
-        let _ = Command::new("/usr/bin/touch").arg(bundle).status();
         Ok(())
     }
 

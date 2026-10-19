@@ -191,15 +191,19 @@ impl LauncherUi {
                 // Right to left: the view switch at the far right, then the search.
                 crate::bar::view_toggle(ui, &mut self.settings.view, [tl!("Show apps as cards"), tl!("Show apps as a table")]);
                 ui.add_space(4.0);
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.search)
-                        .hint_text(tl!("Search apps"))
-                        .desired_width(200.0)
-                        .min_size(vec2(0.0, theme::CONTROL_H))
-                        .vertical_align(egui::Align::Center)
-                        .margin(vec2(10.0, 0.0)),
-                );
-                if self.settings.view == ViewMode::Grid && !compact {
+                // BetterCraft: no search or sort in the cleaner compact layout.
+                let full = !crate::bettercraft::compact();
+                if full {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.search)
+                            .hint_text(tl!("Search apps"))
+                            .desired_width(200.0)
+                            .min_size(vec2(0.0, theme::CONTROL_H))
+                            .vertical_align(egui::Align::Center)
+                            .margin(vec2(10.0, 0.0)),
+                    );
+                }
+                if full && self.settings.view == ViewMode::Grid && !compact {
                     self.sort_picker(ui);
                     // The caption only where it fits beside the filters (longer in some languages).
                     let sort = tl!("Sort");
@@ -215,7 +219,7 @@ impl LauncherUi {
         if compact {
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                if self.settings.view == ViewMode::Grid {
+                if self.settings.view == ViewMode::Grid && !crate::bettercraft::compact() {
                     // "Sort" before the picker, as in the full-width row.
                     widgets::hud(ui, tl!("Sort"), t.faint);
                     self.sort_picker(ui);

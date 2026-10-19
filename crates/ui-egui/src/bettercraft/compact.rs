@@ -87,6 +87,9 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
     text_ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
         ui.add(egui::Label::new(RichText::new(app.name).font(name_font.clone()).color(t.ink_strong)).selectable(false));
+        if installed {
+            mac_badge(ui, app.id, &t);
+        }
         let tagline = tr_ctx(current(), app.id, app.tagline);
         ui.add(egui::Label::new(RichText::new(tagline).size(12.0).color(t.faint)).selectable(false).truncate());
     });
@@ -116,6 +119,20 @@ fn icon_pair(ui: &Ui, id: &str, left_mid: egui::Pos2, in_colour: bool, row_fill:
         egui::Image::new(source).tint(fade).paint_at(ui, original);
     }
     craft.union(original)
+}
+
+/// Whether this app carries the original program's look on this Mac: ORIGINAL or CRAFT, one word
+/// so it never crowds the name; the tooltip says what exactly.
+fn mac_badge(ui: &mut Ui, id: &str, t: &Tokens) {
+    let Some(state) = super::machine_icons::app_state(id) else { return };
+    let tip = match (state.icons, state.names) {
+        (true, true) => super::say("Original icon and name on this Mac", "Ícone e nome originais neste Mac"),
+        (true, false) => super::say("Original icon on this Mac", "Ícone original neste Mac"),
+        (false, true) => super::say("Original name on this Mac", "Nome original neste Mac"),
+        (false, false) => super::say("Craft icon and name on this Mac", "Ícone e nome Craft neste Mac"),
+    };
+    let (text, color) = if state.icons || state.names { ("Original", t.good) } else { ("Craft", t.faint) };
+    widgets::badge(ui, text, color).on_hover_text(tip);
 }
 
 /// One quiet line: the version when all is well, the status (in its tone) when something is up.
