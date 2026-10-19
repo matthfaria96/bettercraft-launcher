@@ -1,0 +1,26 @@
+# BetterCraft: merge storytold/craft-launcher into main every day. The fork's own code is
+# crates/ui-egui/src/better_icons.rs, assets/better-icons/ and a 3-line hook, so merges are clean.
+name: BetterCraft upstream sync
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    if: github.repository != 'storytold/craft-launcher'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+      - name: Merge upstream
+        run: |
+          git config user.name "BetterCraft Sync"
+          git config user.email "bettercraft-sync@users.noreply.github.com"
+          git remote add upstream https://github.com/storytold/craft-launcher.git
+          git fetch upstream main
+          git merge --no-edit upstream/main
+          git push origin HEAD:main

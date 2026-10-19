@@ -173,6 +173,7 @@ impl LauncherUi {
         let mut compact = false;
         ui.horizontal(|ui| {
             self.refresh_button(ui);
+            crate::better_icons::toggle_button(ui);
             // Hiding an app is only undone from here, so the way back to the hidden ones stays
             // while there are any: a toggle, lit while the hidden apps are what the page shows.
             if !self.settings.hidden.is_empty() {

@@ -18,6 +18,7 @@ macro_rules! tl {
 
 mod app;
 mod bar;
+mod better_icons;
 mod card_parts;
 #[cfg(not(target_arch = "wasm32"))]
 mod cjk_font;
