@@ -12,9 +12,14 @@ with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours;
   program's. *+ Names* also shows the original program's name (e.g. PhotoCraft → Adobe Photoshop)
   through a localized display name; the `.app` keeps its file name, so the launcher still finds and
   updates it. Adding names changes sealed files, so the app is re-signed ad hoc (keeping its
-  entitlements); *Off* or *Icons* removes the names again. The menu bar keeps the executable's name,
-  and an app that sets its own Dock icon while running (eframe's default) still does. App updates
-  replace the bundle; the launcher re-applies the choice within seconds while it runs.
+  entitlements); *Off* or *Icons* removes the names again. The menu bar keeps the executable's name.
+  The Dock is forced too (`bettercraft/dock_icon.rs`): the bundle's `.icns` (shown while an app
+  starts) and the icon the app hands eframe at runtime (eframe's default PNG, or the app's own PNG
+  embedded in its executable, found by comparing it with the app's Craft icon) are replaced, with
+  the Craft originals kept in the bundle to put back. Each installed row shows an ORIGINAL / CRAFT
+  badge. App updates (through this launcher) replace the bundle; the launcher re-applies the
+  choice within seconds while it runs, and an app that is open shows the new Dock icon from its
+  next start.
 
 The icons used:
 
