@@ -33,3 +33,12 @@ Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/better-icons/`, this
 workflow and script. Upstream files touched: one-line hooks in `lib.rs`, `views.rs` (toolbar and
 `grid_block`) and `icons.rs`, plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
 upstream's UI tests keep checking upstream's cards. The original icons are trademarks of their owners and are used here for personal use.
+
+## Launcher icon and installing on macOS
+
+The BetterCraft icon (`assets/bettercraft/launcher-icon-source.png`) replaces the ArtCraft icon in
+the app bundle. `scripts/make-launcher-icon.sh` turns the source art into
+`assets/bettercraft/bettercraft-launcher.icns` (macOS rounded square with margin), and
+`scripts/install-mac.sh` builds the app, swaps that icon in, re-signs, installs
+`/Applications/BetterCraft Launcher.app` and fails if the installed icon isn't byte-for-byte ours.
+Upstream's own icon files are left untouched, so their changes never conflict with this one.
