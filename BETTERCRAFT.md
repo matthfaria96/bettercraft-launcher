@@ -46,10 +46,11 @@ Study set (original program and name for each Craft App):
 | GridCraft | Microsoft Excel |
 | CADCraft | AutoCAD |
 
-Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/better-icons/`, this file, the sync
-workflow and script. Upstream files touched: one-line hooks in `lib.rs` and `views.rs` (toolbar and
-`grid_block`), plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
-upstream's UI tests keep checking upstream's cards. The original icons are trademarks of their owners and are used here for personal use.
+Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/craft-icons/`, `assets/study-icons/`,
+`assets/bettercraft/`, `scripts/`, this file and the sync workflow. Upstream files touched: small
+hooks in `lib.rs`, `views.rs`, `app.rs` (no upstream self-update) and `settings_dialog.rs`, plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
+upstream's UI tests keep checking upstream's cards. The Study set's original program icons and names are trademarks of their owners, used here for
+personal study only.
 
 ## Launcher icon and installing on macOS
 
