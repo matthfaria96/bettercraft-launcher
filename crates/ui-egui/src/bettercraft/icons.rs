@@ -1,7 +1,27 @@
-//! The original programs' icons for the Craft Apps: drawn beside each Craft icon in the compact
-//! rows, and put on the installed apps by `machine_icons` while [`super::ORIGINAL_ICONS`] is on.
+//! The original programs' icons and names for the Craft Apps: the icons are drawn beside each
+//! Craft icon in the compact rows; `machine_icons` puts icons (and names) on the installed apps.
 
 use egui::ImageSource;
+
+/// The original program's name for a Craft App id, as Finder, Launchpad and the Dock show it.
+pub fn name(id: &str) -> Option<&'static str> {
+    Some(match id {
+        "photocraft" => "Adobe Photoshop",
+        "vectorcraft" => "Adobe Illustrator",
+        "filmcraft" => "Adobe Premiere Pro",
+        "lightcraft" => "Adobe Lightroom",
+        "pdfcraft" => "Adobe Acrobat",
+        "effectcraft" => "Adobe After Effects",
+        "designcraft" => "Adobe InDesign",
+        "wordcraft" => "Microsoft Word",
+        "deckcraft" => "Microsoft PowerPoint",
+        "gridcraft" => "Microsoft Excel",
+        "cadcraft" => "AutoCAD",
+        "soundcraft" => "Adobe Audition",
+        "figcraft" => "Figma",
+        _ => return None,
+    })
+}
 
 /// The original program's icon for a Craft App id.
 pub fn app(id: &str) -> Option<ImageSource<'static>> {
@@ -46,7 +66,7 @@ pub fn icns(id: &str) -> Option<&'static [u8]> {
 
 #[cfg(test)]
 mod tests {
-    use super::app;
+    use super::{app, name};
 
     #[test]
     fn every_craft_app_has_an_original_icon() {
@@ -66,6 +86,7 @@ mod tests {
             "figcraft",
         ] {
             assert!(app(id).is_some(), "{id}");
+            assert!(name(id).is_some(), "{id}");
         }
         assert!(app("nope").is_none());
     }

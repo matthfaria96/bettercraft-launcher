@@ -7,14 +7,18 @@ with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours;
 - **Compact rows** (always on, no button): one slim row per app with its icon pair (the Craft icon small and
   behind, the original program's icon it gets on the Mac larger and in front), name, one status
   line and the main button, instead of the tall cards.
-- **Mac icons ● ON/OFF**: the switch shows its state (and `…` while it works; the tooltip counts the apps done). On, it gives the installed `.app` bundles the original programs' icons in Finder,
-  Launchpad and the Dock (macOS). An app update replaces the bundle and drops the custom icon, so
-  the launcher puts it back within seconds while it runs. Turning the button off restores the Craft
-  icons. Inside the launcher the Craft icons stay as they are.
+- **Mac icons [ Off | Icons | + Names ]** (toolbar): what the installed `.app` bundles look like in
+  Finder, Launchpad and the Dock (macOS). *Icons* sets each app's custom icon to the original
+  program's. *+ Names* also shows the original program's name (e.g. PhotoCraft → Adobe Photoshop)
+  through a localized display name; the `.app` keeps its file name, so the launcher still finds and
+  updates it. Adding names changes sealed files, so the app is re-signed ad hoc (keeping its
+  entitlements); *Off* or *Icons* removes the names again. The menu bar keeps the executable's name,
+  and an app that sets its own Dock icon while running (eframe's default) still does. App updates
+  replace the bundle; the launcher re-applies the choice within seconds while it runs.
 
 The icons used:
 
-| Craft App | Original |
+| Craft App | Original program (icon and name) |
 |---|---|
 | PhotoCraft | Adobe Photoshop |
 | VectorCraft | Adobe Illustrator |

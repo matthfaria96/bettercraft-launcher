@@ -2,7 +2,7 @@
 //! of upstream's tall cards with their version strip, GitHub link, description and date.
 //!
 //! Hooked from the top of upstream's `grid_block`; returns false (draw upstream's cards) while
-//! [`super::COMPACT`] is off.
+//! [`super::compact`] is off.
 
 use artcraft_launcher_core::status::AppStatus;
 use egui::{CornerRadius, FontId, Rect, RichText, Sense, Ui, vec2};
@@ -28,7 +28,7 @@ const ACTIONS_W: f32 = 212.0;
 
 /// Draws `ids` as compact rows when compact mode is on; false means upstream should draw them.
 pub(crate) fn grid_block(launcher: &mut LauncherUi, ui: &mut Ui, ids: &[&'static str]) -> bool {
-    if !super::COMPACT.get() {
+    if !super::compact() {
         return false;
     }
     if ids.is_empty() {
