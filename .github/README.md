@@ -4,51 +4,53 @@
 
 <h1 align="center">BetterCraft Launcher</h1>
 
+<p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a></p>
+
 <p align="center">
-  <b>O launcher do Craft App Suite repensado: sem ruído visual, direto ao ponto e com ícones melhores.</b><br>
-  Uma versão melhorada da experiência do
-  <a href="https://github.com/storytold/craft-launcher">ArtCraft Launcher</a>, sempre em dia com ele.
+  <b>The Craft App Suite launcher, rethought: no visual noise, straight to the point, with better icons.</b><br>
+  A better take on the <a href="https://github.com/storytold/craft-launcher">ArtCraft Launcher</a>
+  experience, always kept up to date with it.
 </p>
 
 <p align="center">
-  <img src="../docs/bettercraft/screenshot.png" alt="BetterCraft Launcher no macOS: a lista dos Craft Apps instalados, cada um com o ícone original ao lado do redesenhado, a versão e o botão Abrir" width="760">
+  <img src="../docs/bettercraft/screenshot.png" alt="BetterCraft Launcher on macOS: the list of installed Craft Apps, each with its original icon beside the redesigned one, its version and an Open button" width="760">
 </p>
 
-## O que é
+## What it is
 
-O BetterCraft Launcher instala, atualiza e abre os apps do Craft App Suite (PhotoCraft,
+BetterCraft Launcher installs, updates and opens the apps of the Craft App Suite (PhotoCraft,
 VectorCraft, FilmCraft, LightCraft, PdfCraft, EffectCraft, DesignCraft, WordCraft, DeckCraft,
-GridCraft, CADCraft, SoundCraft e FigCraft), igual ao original. O que muda é a experiência:
-fica só o que importa.
+GridCraft, CADCraft, SoundCraft and FigCraft), just like the original. What changes is the
+experience: only what matters stays.
 
-## O que melhorou
+## What's better
 
-- **Sem ruído visual.** Uma lista compacta, uma linha por app: ícone, nome, versão e um botão.
-  Saíram páginas de detalhes, notas de versão, avisos, links sociais, busca, ordenação e a troca
-  entre grade e tabela.
-- **Direto ao ponto.** A barra tem só duas coisas: *Quais ícones usar?* e *Atualizar*. O menu de
-  cada app tem só Abrir, Mostrar no Finder, Reinstalar e Desinstalar.
-- **Ícones redesenhados.** Com *Redesign*, cada Craft App instalado ganha um ícone novo, mais
-  claro e consistente, no Finder, no Launchpad e no Dock, inclusive com o app aberto. *Originais
-  Craft* devolve os ícones de fábrica. Cada linha mostra qual dos dois o app está usando.
-- **Atualizações sem surpresa.** A versão é lida do próprio app, então as atualizações funcionam
-  com qualquer ícone. O launcher nunca mexe num app enquanto ele atualiza e aplica o ícone na
-  versão nova logo em seguida.
-- **Configurações enxutas.** Atualizações, aparência e o estilo dos ícones. Nada além disso.
-- **Sempre em dia com o original.** Um workflow traz as mudanças do
-  [storytold/craft-launcher](https://github.com/storytold/craft-launcher) a cada 6 horas. Todo o
-  código novo fica em `crates/ui-egui/src/bettercraft/`, com ganchos de uma linha no resto.
+- **No visual noise.** A compact list, one row per app: icon, name, version and one button. App
+  pages, release notes, announcements, social links, search, sorting and the grid/table switch
+  are gone.
+- **Straight to the point.** The toolbar has two things: *Which icons?* and *Update*. Each app's
+  menu has only Open, Show in Finder, Reinstall and Uninstall.
+- **Redesigned icons.** With *Redesign*, every installed Craft App gets a new, clearer and more
+  consistent icon in Finder, Launchpad and the Dock, even while the app is running. *Craft
+  originals* puts the stock icons back. Each row shows which one the app is using.
+- **Updates without surprises.** The version is read from the app itself, so updates work with
+  either icon. The launcher never touches an app while it updates and dresses the new version
+  right after.
+- **Lean settings.** Updates, appearance and the icon style. Nothing else.
+- **Always in step with the original.** A workflow brings in the changes from
+  [storytold/craft-launcher](https://github.com/storytold/craft-launcher) every 6 hours. All new
+  code lives in `crates/ui-egui/src/bettercraft/`, with one-line hooks elsewhere.
 
-## Modo Estudo (não oficial)
+## Study mode (unofficial)
 
-Nas Configurações, o cartão *Estudo* troca os ícones e os nomes dos apps pelos dos programas que
-eles imitam (PhotoCraft → Adobe Photoshop, WordCraft → Microsoft Word…), com uma fita amarela
-CRAFT no canto do ícone. É um modo de teste, não oficial. Os ícones e nomes desses programas são
-marcas dos seus donos.
+In Settings, the *Study* card swaps the apps' icons and names for those of the programs they
+imitate (PhotoCraft → Adobe Photoshop, WordCraft → Microsoft Word…), with a yellow CRAFT ribbon on
+the icon's corner. It is a test mode, not official. Those programs' icons and names are
+trademarks of their owners.
 
-## Instalar no macOS
+## Install on macOS
 
-Precisa do [Rust](https://rustup.rs) e das ferramentas de linha de comando do Xcode.
+Requires [Rust](https://rustup.rs) and the Xcode command line tools.
 
 ```sh
 git clone https://github.com/matthfaria96/bettercraft-launcher.git
@@ -56,16 +58,16 @@ cd bettercraft-launcher
 scripts/install-mac.sh
 ```
 
-O script compila o app, instala em `/Applications/BetterCraft Launcher.app` e abre. Para pegar as
-novidades do original e reinstalar:
+The script builds the app, installs it to `/Applications/BetterCraft Launcher.app` and opens it.
+To pull in the original's latest changes and reinstall:
 
 ```sh
 scripts/sync-upstream.sh && scripts/install-mac.sh
 ```
 
-Detalhes técnicos em [BETTERCRAFT.md](../BETTERCRAFT.md).
+Technical details in [BETTERCRAFT.md](../BETTERCRAFT.md).
 
-## Licença
+## License
 
-Igual ao original: MIT ou Apache-2.0. O nome e a marca ArtCraft pertencem aos seus donos
+Same as the original: MIT or Apache-2.0. The ArtCraft name and mark belong to their owners
 (`docs/brand/LICENSE-brand.txt`).
