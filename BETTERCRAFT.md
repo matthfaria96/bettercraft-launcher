@@ -7,7 +7,7 @@ with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours;
 - **Compact** (on by default): one slim row per app with its icon pair (the Craft icon small and
   behind, the original program's icon it gets on the Mac larger and in front), name, one status
   line and the main button, instead of the tall cards.
-- **Swap Mac Icons**: gives the installed `.app` bundles the original programs' icons in Finder,
+- **Mac icons ● ON/OFF**: the switch shows its state (and `…` while it works; the tooltip counts the apps done). On, it gives the installed `.app` bundles the original programs' icons in Finder,
   Launchpad and the Dock (macOS). An app update replaces the bundle and drops the custom icon, so
   the launcher puts it back within seconds while it runs. Turning the button off restores the Craft
   icons. Inside the launcher the Craft icons stay as they are.

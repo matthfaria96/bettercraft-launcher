@@ -1,19 +1,41 @@
 //! The original programs' icons on the installed Craft App bundles, so Finder, Launchpad and the
 //! Dock show them too (macOS only).
 //!
-//! macOS keeps a custom icon in an `Icon\r` file at the bundle's root. An update replaces the whole
-//! `.app`, dropping it, so while the choice is on the bundles are checked every few seconds and the
-//! icon is put back where it is missing. Turning the choice off clears the custom icons.
+//! macOS keeps a custom icon in an `Icon\r` file at the bundle's root. The bundles are kept in step
+//! with the switch both ways: on, a bundle without the icon gets it (an update replaces the whole
+//! `.app`, dropping it); off, a bundle with it is cleared back to the Craft icon. The check runs at
+//! once when the switch is clicked and every few seconds after.
 
 use crate::LauncherUi;
+
+/// What the last pass found, for the switch's label and tooltip.
+#[derive(Clone, Debug, Default)]
+pub(super) struct Status {
+    pub busy: bool,
+    /// Installed apps that carry the original icon.
+    pub swapped: usize,
+    /// Installed `.app` bundles.
+    pub total: usize,
+    pub error: Option<String>,
+}
 
 #[cfg(target_os = "macos")]
 pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
     imp::sync(launcher, toggled);
 }
 
+#[cfg(target_os = "macos")]
+pub(super) fn status() -> Status {
+    imp::status()
+}
+
 #[cfg(not(target_os = "macos"))]
 pub(super) fn sync(_launcher: &LauncherUi, _toggled: bool) {}
+
+#[cfg(not(target_os = "macos"))]
+pub(super) fn status() -> Status {
+    Status::default()
+}
 
 #[cfg(target_os = "macos")]
 mod imp {
@@ -23,29 +45,37 @@ mod imp {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::time::{Duration, Instant};
 
+    use super::Status;
     use crate::LauncherUi;
 
-    const RECHECK: Duration = Duration::from_secs(10);
+    const RECHECK: Duration = Duration::from_secs(5);
 
     static BUSY: AtomicBool = AtomicBool::new(false);
     static LAST: Mutex<Option<Instant>> = Mutex::new(None);
+    static STATUS: Mutex<Option<Status>> = Mutex::new(None);
 
-    /// Sets (with an `.icns` path) or clears (with an empty one) a file's custom icon.
+    /// Sets (with an `.icns` path) or clears (with an empty one) a file's custom icon, then tells
+    /// Finder the file changed so it redraws.
     const SET_ICON: &str = "ObjC.import('AppKit');\
         function run(argv) {\
+          const ws = $.NSWorkspace.sharedWorkspace;\
           const image = argv[0] ? $.NSImage.alloc.initWithContentsOfFile(argv[0]) : undefined;\
-          return $.NSWorkspace.sharedWorkspace.setIconForFileOptions(image, argv[1], 0) ? 'ok' : 'failed';\
+          const ok = ws.setIconForFileOptions(image, argv[1], 0);\
+          ws.noteFileSystemChanged(argv[1]);\
+          return ok ? 'ok' : 'failed';\
         }";
 
+    pub(super) fn status() -> Status {
+        let mut status = STATUS.lock().ok().and_then(|s| s.clone()).unwrap_or_default();
+        status.busy = BUSY.load(Ordering::Acquire);
+        status
+    }
+
     pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
-        let on = super::super::ORIGINAL_ICONS.get();
-        // Turned off: clear once. Otherwise only while on, every RECHECK.
-        if !on && !toggled {
-            return;
-        }
         if !toggled && !due() {
             return;
         }
+        let on = super::super::ORIGINAL_ICONS.get();
         let apps: Vec<(String, PathBuf)> = launcher
             .entries
             .iter()
@@ -54,14 +84,20 @@ mod imp {
                 location.ends_with(".app").then(|| (e.app.id.to_string(), PathBuf::from(location)))
             })
             .collect();
-        if apps.is_empty() || BUSY.swap(true, Ordering::AcqRel) {
+        if BUSY.swap(true, Ordering::AcqRel) {
             return;
         }
         std::thread::spawn(move || {
-            for (id, bundle) in apps {
-                if let Err(e) = apply(&id, &bundle, on) {
+            let mut error = None;
+            for (id, bundle) in &apps {
+                if let Err(e) = apply(id, bundle, on) {
                     log::warn!("BetterCraft: couldn't change the icon of {}: {e}", bundle.display());
+                    error = Some(format!("{}: {e}", bundle.display()));
                 }
+            }
+            let swapped = apps.iter().filter(|(_, b)| has_custom_icon(b)).count();
+            if let Ok(mut s) = STATUS.lock() {
+                *s = Some(Status { busy: false, swapped, total: apps.len(), error });
             }
             BUSY.store(false, Ordering::Release);
         });
@@ -92,7 +128,7 @@ mod imp {
         if !out.status.success() || answer.trim() != "ok" {
             return Err(format!("osascript said {:?} {:?}", answer.trim(), String::from_utf8_lossy(&out.stderr).trim()));
         }
-        // Nudge Finder and the Dock to redraw the bundle.
+        // A new modification date makes the Dock and Launchpad look again too.
         let _ = Command::new("/usr/bin/touch").arg(bundle).status();
         Ok(())
     }
