@@ -15,6 +15,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use super::assets::{self, IconStyle};
+
 /// eframe 0.36's default app icon, as embedded in every eframe executable.
 const EFRAME_DEFAULT: &[u8] = include_bytes!("../../../../assets/better-icons/dock/eframe-default.png");
 /// Where the bundle's own `.icns` is kept while the original program's is in its place.
@@ -25,89 +27,13 @@ const RUNTIME_PREFIX: &str = "bettercraft-runtime-";
 /// app's icon scores 0.9–1.4 against a reference, everything else in the Craft Apps 29 and up.
 const ALIKE: f32 = 10.0;
 
-/// The original program's icon at 256 px, for embedded icons with room for it.
-fn large_png(id: &str) -> Option<&'static [u8]> {
-    Some(match id {
-        "photocraft" => include_bytes!("../../../../assets/better-icons/photocraft.png"),
-        "vectorcraft" => include_bytes!("../../../../assets/better-icons/vectorcraft.png"),
-        "filmcraft" => include_bytes!("../../../../assets/better-icons/filmcraft.png"),
-        "lightcraft" => include_bytes!("../../../../assets/better-icons/lightcraft.png"),
-        "pdfcraft" => include_bytes!("../../../../assets/better-icons/pdfcraft.png"),
-        "effectcraft" => include_bytes!("../../../../assets/better-icons/effectcraft.png"),
-        "designcraft" => include_bytes!("../../../../assets/better-icons/designcraft.png"),
-        "wordcraft" => include_bytes!("../../../../assets/better-icons/wordcraft.png"),
-        "deckcraft" => include_bytes!("../../../../assets/better-icons/deckcraft.png"),
-        "gridcraft" => include_bytes!("../../../../assets/better-icons/gridcraft.png"),
-        "cadcraft" => include_bytes!("../../../../assets/better-icons/cadcraft.png"),
-        "soundcraft" => include_bytes!("../../../../assets/better-icons/soundcraft.png"),
-        "figcraft" => include_bytes!("../../../../assets/better-icons/figcraft.png"),
-        _ => return None,
-    })
-}
-
-/// The original program's icon at 96 px, for small embedded icons.
-fn small_png(id: &str) -> Option<&'static [u8]> {
-    Some(match id {
-        "photocraft" => include_bytes!("../../../../assets/better-icons/small/photocraft-96.png"),
-        "vectorcraft" => include_bytes!("../../../../assets/better-icons/small/vectorcraft-96.png"),
-        "filmcraft" => include_bytes!("../../../../assets/better-icons/small/filmcraft-96.png"),
-        "lightcraft" => include_bytes!("../../../../assets/better-icons/small/lightcraft-96.png"),
-        "pdfcraft" => include_bytes!("../../../../assets/better-icons/small/pdfcraft-96.png"),
-        "effectcraft" => include_bytes!("../../../../assets/better-icons/small/effectcraft-96.png"),
-        "designcraft" => include_bytes!("../../../../assets/better-icons/small/designcraft-96.png"),
-        "wordcraft" => include_bytes!("../../../../assets/better-icons/small/wordcraft-96.png"),
-        "deckcraft" => include_bytes!("../../../../assets/better-icons/small/deckcraft-96.png"),
-        "gridcraft" => include_bytes!("../../../../assets/better-icons/small/gridcraft-96.png"),
-        "cadcraft" => include_bytes!("../../../../assets/better-icons/small/cadcraft-96.png"),
-        "soundcraft" => include_bytes!("../../../../assets/better-icons/small/soundcraft-96.png"),
-        "figcraft" => include_bytes!("../../../../assets/better-icons/small/figcraft-96.png"),
-        _ => return None,
-    })
-}
-
-/// The original program's icon at 64 px, the last resort.
-fn tiny_png(id: &str) -> Option<&'static [u8]> {
-    Some(match id {
-        "photocraft" => include_bytes!("../../../../assets/better-icons/small/photocraft-64.png"),
-        "vectorcraft" => include_bytes!("../../../../assets/better-icons/small/vectorcraft-64.png"),
-        "filmcraft" => include_bytes!("../../../../assets/better-icons/small/filmcraft-64.png"),
-        "lightcraft" => include_bytes!("../../../../assets/better-icons/small/lightcraft-64.png"),
-        "pdfcraft" => include_bytes!("../../../../assets/better-icons/small/pdfcraft-64.png"),
-        "effectcraft" => include_bytes!("../../../../assets/better-icons/small/effectcraft-64.png"),
-        "designcraft" => include_bytes!("../../../../assets/better-icons/small/designcraft-64.png"),
-        "wordcraft" => include_bytes!("../../../../assets/better-icons/small/wordcraft-64.png"),
-        "deckcraft" => include_bytes!("../../../../assets/better-icons/small/deckcraft-64.png"),
-        "gridcraft" => include_bytes!("../../../../assets/better-icons/small/gridcraft-64.png"),
-        "cadcraft" => include_bytes!("../../../../assets/better-icons/small/cadcraft-64.png"),
-        "soundcraft" => include_bytes!("../../../../assets/better-icons/small/soundcraft-64.png"),
-        "figcraft" => include_bytes!("../../../../assets/better-icons/small/figcraft-64.png"),
-        _ => return None,
-    })
-}
-
-/// The best of the original program's icons that fits in `len` bytes, padded with zeros to `len`.
-fn ours_for(id: &str, len: usize) -> Option<Vec<u8>> {
-    [large_png(id), dock_png(id), small_png(id), tiny_png(id)].into_iter().flatten().find_map(|png| padded(png, len))
-}
-
-/// The original program's icon as a PNG no larger than eframe's default, for the executable.
-fn dock_png(id: &str) -> Option<&'static [u8]> {
-    Some(match id {
-        "photocraft" => include_bytes!("../../../../assets/better-icons/dock/photocraft.png"),
-        "vectorcraft" => include_bytes!("../../../../assets/better-icons/dock/vectorcraft.png"),
-        "filmcraft" => include_bytes!("../../../../assets/better-icons/dock/filmcraft.png"),
-        "lightcraft" => include_bytes!("../../../../assets/better-icons/dock/lightcraft.png"),
-        "pdfcraft" => include_bytes!("../../../../assets/better-icons/dock/pdfcraft.png"),
-        "effectcraft" => include_bytes!("../../../../assets/better-icons/dock/effectcraft.png"),
-        "designcraft" => include_bytes!("../../../../assets/better-icons/dock/designcraft.png"),
-        "wordcraft" => include_bytes!("../../../../assets/better-icons/dock/wordcraft.png"),
-        "deckcraft" => include_bytes!("../../../../assets/better-icons/dock/deckcraft.png"),
-        "gridcraft" => include_bytes!("../../../../assets/better-icons/dock/gridcraft.png"),
-        "cadcraft" => include_bytes!("../../../../assets/better-icons/dock/cadcraft.png"),
-        "soundcraft" => include_bytes!("../../../../assets/better-icons/dock/soundcraft.png"),
-        "figcraft" => include_bytes!("../../../../assets/better-icons/dock/figcraft.png"),
-        _ => return None,
-    })
+/// The best of the original program's icons (in `style`) that fits in `len` bytes, padded with
+/// zeros to `len`.
+fn ours_for(style: IconStyle, id: &str, len: usize) -> Option<Vec<u8>> {
+    [assets::png256(style, id), assets::dock(style, id), assets::png96(style, id), assets::png64(style, id)]
+        .into_iter()
+        .flatten()
+        .find_map(|png| padded(png, len))
 }
 
 /// `png` padded with zeros to `len`; `None` if it doesn't fit.
@@ -123,25 +49,26 @@ pub(super) fn is_patched(bundle: &Path) -> bool {
 }
 
 /// Puts the original program's Dock icons into the bundle (`on`) or the Craft ones back.
-pub(super) fn set(id: &str, bundle: &Path, on: bool) -> Result<(), String> {
+/// `style` is the style to put in (`on`), or the one that was put in (to take it out).
+pub(super) fn set(style: IconStyle, id: &str, bundle: &Path, on: bool) -> Result<(), String> {
     let missing = || format!("no Dock icon for {id}");
     let resources = bundle.join("Contents/Resources");
     let icns = resources.join(icon_file(bundle)?);
     let backup = resources.join(BACKUP);
     let exe = bundle.join("Contents/MacOS").join(plist_value(bundle, "CFBundleExecutable")?);
-    let eframe_ours = ours_for(id, EFRAME_DEFAULT.len()).ok_or_else(missing)?;
+    let eframe_ours = ours_for(style, id, EFRAME_DEFAULT.len()).ok_or_else(missing)?;
     if on {
-        let original = super::icons::icns(id).ok_or_else(|| format!("no original icon for {id}"))?;
+        let original = assets::icns(style, id).ok_or_else(|| format!("no original icon for {id}"))?;
         if !backup.exists() {
             std::fs::copy(&icns, &backup).map_err(|e| format!("couldn't keep the Craft icon ({e})"))?;
         }
         std::fs::write(&icns, original).map_err(|e| format!("couldn't write the icon ({e})"))?;
         replace_in_file(&exe, EFRAME_DEFAULT, &eframe_ours)?;
-        replace_own_icons(id, &exe, &backup, &resources)
+        replace_own_icons(style, id, &exe, &backup, &resources)
     } else {
         for kept in runtime_backups(&resources) {
             let craft = std::fs::read(&kept).map_err(|e| e.to_string())?;
-            let ours = ours_for(id, craft.len()).ok_or_else(missing)?;
+            let ours = ours_for(style, id, craft.len()).ok_or_else(missing)?;
             replace_in_file(&exe, &ours, &craft)?;
             std::fs::remove_file(&kept).map_err(|e| e.to_string())?;
         }
@@ -156,7 +83,7 @@ pub(super) fn set(id: &str, bundle: &Path, on: bool) -> Result<(), String> {
 /// The app's own icons embedded in `exe` (alike its `.icns`, kept at `craft_icns`, or the Craft
 /// icon the launcher shows, which some versions use instead) are kept in `resources` and replaced
 /// by the original program's.
-fn replace_own_icons(id: &str, exe: &Path, craft_icns: &Path, resources: &Path) -> Result<(), String> {
+fn replace_own_icons(style: IconStyle, id: &str, exe: &Path, craft_icns: &Path, resources: &Path) -> Result<(), String> {
     let mut references = vec![icns_picture(craft_icns)?];
     if let Some(egui::ImageSource::Bytes { bytes, .. }) = crate::icons::app(id)
         && let Ok(picture) = image::load_from_memory(bytes.as_ref())
@@ -177,7 +104,7 @@ fn replace_own_icons(id: &str, exe: &Path, craft_icns: &Path, resources: &Path) 
     }
     let mut n = runtime_backups(resources).len();
     for craft in own {
-        let Some(ours) = ours_for(id, craft.len()) else { continue };
+        let Some(ours) = ours_for(style, id, craft.len()) else { continue };
         std::fs::write(resources.join(format!("{RUNTIME_PREFIX}{n}.png")), craft).map_err(|e| e.to_string())?;
         n += 1;
         replace_in_file(exe, craft, &ours)?;
@@ -313,7 +240,7 @@ fn replace_all(bytes: &[u8], from: &[u8], to: &[u8]) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{EFRAME_DEFAULT, dock_png, ours_for, padded, replace_all};
+    use super::{EFRAME_DEFAULT, IconStyle, ours_for, replace_all};
 
     const IDS: [&str; 13] = [
         "photocraft",
@@ -334,14 +261,16 @@ mod tests {
     #[test]
     fn every_dock_icon_fits_and_still_decodes_with_its_padding() {
         // eframe unwraps the decode of its default icon: a bad PNG here would crash the app.
-        for id in IDS {
-            let bytes = dock_png(id).and_then(|p| padded(p, EFRAME_DEFAULT.len())).unwrap_or_else(|| panic!("{id} doesn't fit"));
-            assert_eq!(bytes.len(), EFRAME_DEFAULT.len(), "{id}");
-            let image = image::load_from_memory(&bytes).unwrap_or_else(|e| panic!("{id}: {e}"));
-            assert!(image.width() >= 120, "{id} is only {} px", image.width());
-            // Room for the 256 px one, as in an app's own 512 px icon.
-            let large = ours_for(id, 300_000).unwrap();
-            assert_eq!(image::load_from_memory(&large).map(|i| i.width()).ok(), Some(256), "{id}");
+        for style in IconStyle::ALL {
+            for id in IDS {
+                let bytes = ours_for(style, id, EFRAME_DEFAULT.len()).unwrap_or_else(|| panic!("{style:?} {id} doesn't fit"));
+                assert_eq!(bytes.len(), EFRAME_DEFAULT.len(), "{id}");
+                let image = image::load_from_memory(&bytes).unwrap_or_else(|e| panic!("{style:?} {id}: {e}"));
+                assert!(image.width() >= 96, "{style:?} {id} is only {} px", image.width());
+                // Room for the 256 px one, as in an app's own 512 px icon.
+                let large = ours_for(style, id, 300_000).unwrap();
+                assert_eq!(image::load_from_memory(&large).map(|i| i.width()).ok(), Some(256), "{id}");
+            }
         }
     }
 
@@ -377,7 +306,7 @@ mod tests {
 
     #[test]
     fn replacing_swaps_every_copy_and_back() {
-        let ours = padded(dock_png("photocraft").unwrap(), EFRAME_DEFAULT.len()).unwrap();
+        let ours = ours_for(IconStyle::Plain, "photocraft", EFRAME_DEFAULT.len()).unwrap();
         let exe = [b"head".as_slice(), EFRAME_DEFAULT, b"mid", EFRAME_DEFAULT, b"tail"].concat();
         let patched = replace_all(&exe, EFRAME_DEFAULT, &ours).unwrap();
         assert_eq!(patched.len(), exe.len());

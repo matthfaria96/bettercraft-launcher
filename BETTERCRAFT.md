@@ -15,19 +15,16 @@ What it adds:
 - **Compact rows** (always on, no button): one slim row per app with its icon pair (the Craft icon small and
   behind, the original program's icon it gets on the Mac larger and in front), name, one status
   line and the main button, instead of the tall cards.
-- **Mac icons [ Off | Icons | + Names ]** (toolbar): what the installed `.app` bundles look like in
-  Finder, Launchpad and the Dock (macOS). *Icons* sets each app's custom icon to the original
-  program's. *+ Names* also shows the original program's name (e.g. PhotoCraft → Adobe Photoshop)
-  through a localized display name; the `.app` keeps its file name, so the launcher still finds and
-  updates it. Adding names changes sealed files, so the app is re-signed ad hoc (keeping its
-  entitlements); *Off* or *Icons* removes the names again. The menu bar keeps the executable's name.
-  The Dock is forced too (`bettercraft/dock_icon.rs`): the bundle's `.icns` (shown while an app
-  starts) and the icon the app hands eframe at runtime (eframe's default PNG, or the app's own PNG
-  embedded in its executable, found by comparing it with the app's Craft icon) are replaced, with
-  the Craft originals kept in the bundle to put back. Each installed row shows an ORIGINAL / CRAFT
-  badge. App updates (through this launcher) replace the bundle; the launcher re-applies the
-  choice within seconds while it runs, and an app that is open shows the new Dock icon from its
-  next start.
+- **On this Mac [ Clone | Original ]** (toolbar): *Original* gives every installed app the original
+  program's icon and name (e.g. PhotoCraft → Adobe Photoshop) in Finder, Launchpad and the Dock,
+  including the Dock icon of a running app; *Clone* puts the Craft look back. Each installed row
+  shows ORIGINAL (green) or CLONE (red). The `.app` keeps its file name and its version keys, so
+  the launcher still finds, checks and updates it; the app is re-signed ad hoc (keeping its
+  entitlements) after the change, and the Craft originals are kept inside the bundle to put back.
+  App updates replace the bundle; the launcher dresses the new version within seconds.
+- **Settings → Original icons [ Plain | Craft badge ]**: the original icons as they are, or with a
+  yellow "Craft" side badge (`assets/better-icons-craft/`, made from the plain ones by
+  `scripts/make-badged-icons.sh`). Changing it re-dresses the installed apps.
 
 The icons used:
 

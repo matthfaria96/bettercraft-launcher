@@ -945,9 +945,11 @@ impl LauncherUi {
                 link(ui, tl!("GitHub repository"), entry.app.repo_url());
                 link(ui, tl!("All releases"), entry.app.releases_url());
             }
-            ui.separator();
+            if !crate::bettercraft::fork() {
+                ui.separator();
+            }
             let hidden = self.settings.hidden.contains(entry.app.id);
-            if ui.button(if hidden { tl!("Unhide App") } else { tl!("Hide App") }).clicked() {
+            if !crate::bettercraft::fork() && ui.button(if hidden { tl!("Unhide App") } else { tl!("Hide App") }).clicked() {
                 if hidden {
                     self.settings.hidden.remove(entry.app.id);
                     if self.settings.hidden.is_empty() && self.settings.filter == Filter::Hidden {
