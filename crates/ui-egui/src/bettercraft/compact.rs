@@ -8,7 +8,6 @@ use artcraft_launcher_core::status::AppStatus;
 use egui::{CornerRadius, FontId, Rect, RichText, Sense, Ui, vec2};
 
 use crate::LauncherUi;
-use crate::i18n::{current, tr_ctx};
 use crate::model::{self, AppEntry};
 use crate::theme::{self, Tokens, rgb};
 use crate::widgets;
@@ -82,8 +81,6 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
         if installed {
             mac_badge(ui, app.id, &t);
         }
-        let tagline = tr_ctx(current(), app.id, app.tagline);
-        ui.add(egui::Label::new(RichText::new(tagline).size(12.0).color(t.faint)).selectable(false).truncate());
     });
     let (line, color) = status_line(&entry, &status, launcher.caps.manage_apps, &t);
     text_ui.add(egui::Label::new(RichText::new(line).font(status_font).color(color)).selectable(false).truncate());
@@ -123,7 +120,7 @@ fn mac_badge(ui: &mut Ui, id: &str, t: &Tokens) {
         (true, false) => super::say("BetterCraft icon on this Mac", "Ícone BetterCraft neste Mac"),
         (false, _) => super::say("The app's own icon on this Mac", "Ícone do próprio app neste Mac"),
     };
-    let (text, color) = if state.icons { (super::custom_label(), t.good) } else { ("Clone", t.bad) };
+    let (text, color) = if state.icons { (super::custom_label(), t.good) } else { (super::say("Original", "Original"), t.bad) };
     widgets::badge(ui, text, color).on_hover_text(tip);
 }
 

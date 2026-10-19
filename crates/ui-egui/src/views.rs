@@ -174,7 +174,9 @@ impl LauncherUi {
         let updates = self.count(Filter::Updates);
         let mut compact = false;
         ui.horizontal(|ui| {
-            self.refresh_button(ui);
+            if !crate::bettercraft::fork() {
+                self.refresh_button(ui);
+            }
             crate::bettercraft::toolbar(self, ui);
             // Hiding an app is only undone from here, so the way back to the hidden ones stays
             // while there are any: a toggle, lit while the hidden apps are what the page shows.
@@ -193,6 +195,7 @@ impl LauncherUi {
                 // Right to left: the view switch at the far right, then the search.
                 if crate::bettercraft::fork() {
                     self.settings.view = ViewMode::Grid;
+                    crate::bettercraft::refresh_button(self, ui);
                 } else {
                     crate::bar::view_toggle(ui, &mut self.settings.view, [tl!("Show apps as cards"), tl!("Show apps as a table")]);
                 }

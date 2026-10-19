@@ -149,7 +149,7 @@ fn say(en: &'static str, pt: &'static str) -> &'static str {
 /// The label of the "custom" choice and badge: NEW for the official set, STUDY for the other.
 pub(crate) fn custom_label() -> &'static str {
     match icon_set() {
-        IconSet::Craft => say("New", "Novo"),
+        IconSet::Craft => say("Redesign", "Redesign"),
         IconSet::Study => say("Study", "Estudo"),
     }
 }
@@ -172,11 +172,11 @@ pub(crate) fn toolbar(launcher: &LauncherUi, ui: &mut Ui) {
 fn mac_mode_picker(ui: &mut Ui) -> bool {
     let t = crate::theme::Tokens::get(ui.ctx());
     let status = machine_icons::status();
-    let caption = if status.busy { say("Mac icons …", "Ícones no Mac …") } else { say("Mac icons", "Ícones no Mac") };
+    let caption = if status.busy { say("Which icons? …", "Quais ícones usar? …") } else { say("Which icons?", "Quais ícones usar?") };
     let mut tip = match icon_set() {
         IconSet::Craft => say(
-            "Clone: the apps as they come. New: the BetterCraft icons in Finder, Launchpad and the Dock (names stay).",
-            "Clone: os apps como vêm. Novo: os ícones BetterCraft no Finder, no Launchpad e no Dock (os nomes ficam).",
+            "Craft originals: the apps' own icons. Redesign: the BetterCraft icons in Finder, Launchpad and the Dock (names stay).",
+            "Originais Craft: os ícones dos próprios apps. Redesign: os ícones BetterCraft no Finder, no Launchpad e no Dock (os nomes ficam).",
         ),
         IconSet::Study => say(
             "Study mode (unofficial, set in Settings): the original programs' icons with the CRAFT ribbon, and their names.",
@@ -194,7 +194,7 @@ fn mac_mode_picker(ui: &mut Ui) -> bool {
     let mut mode = mac_mode();
     let cell = |label, tip| widgets::Cell { label, tip, count: None };
     let options = [
-        (MacMode::Clone, cell(say("Clone", "Clone"), say("The apps' own icons", "Os ícones dos próprios apps"))),
+        (MacMode::Clone, cell(say("Craft originals", "Originais Craft"), say("The apps' own icons", "Os ícones dos próprios apps"))),
         (MacMode::Custom, cell(custom_label(), &tip)),
     ];
     let changed = widgets::cells(ui, &mut mode, &options);
@@ -203,6 +203,20 @@ fn mac_mode_picker(ui: &mut Ui) -> bool {
         ui.ctx().request_repaint();
     }
     changed
+}
+
+/// The check-for-updates button, at the far right of the toolbar, with its name on it.
+pub(crate) fn refresh_button(launcher: &mut LauncherUi, ui: &mut Ui) {
+    let busy = launcher.checking;
+    let label = if busy { say("Checking…", "Verificando…") } else { say("Update", "Atualizar") };
+    let clicked = ui
+        .add_enabled_ui(!busy, |ui| widgets::button(ui, label, widgets::Kind::Secondary, 0.0))
+        .inner
+        .on_hover_text(say("Look for new versions of the apps", "Procura novas versões dos apps"))
+        .clicked();
+    if clicked {
+        launcher.check_now();
+    }
 }
 
 /// The Settings header's picture: the launcher's logo for the current set.
@@ -248,8 +262,8 @@ pub(crate) fn settings_panel(ui: &mut Ui) {
         ui.add_space(4.0);
         ui.label(
             egui::RichText::new(say(
-                "Applied to the installed apps while \"Mac icons\" is on New / Study.",
-                "Aplicado aos apps instalados quando \"Ícones no Mac\" está em Novo / Estudo.",
+                "Applied to the installed apps while \"Which icons?\" is on Redesign / Study.",
+                "Aplicado aos apps instalados quando \"Quais ícones usar?\" está em Redesign / Estudo.",
             ))
             .size(12.0)
             .color(t.muted),
