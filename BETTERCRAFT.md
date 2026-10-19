@@ -2,8 +2,16 @@
 
 A fork of [storytold/craft-launcher](https://github.com/storytold/craft-launcher) that stays in step
 with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours; or run
-`scripts/sync-upstream.sh`). The only addition is an **Original Icons** button in the toolbar,
-which swaps each Craft App's icon for the original program's:
+`scripts/sync-upstream.sh`). It adds two toolbar buttons:
+
+- **Compact** (on by default): one slim row per app (icon, name, one status line, the main button)
+  instead of the tall cards.
+- **Original Icons**: swaps each Craft App's icon for the original program's, in the launcher and,
+  on macOS, on the installed `.app` bundles (Finder, Launchpad, Dock). An app update replaces the
+  bundle and drops the custom icon, so the launcher puts it back within seconds. Turning the button
+  off restores the Craft icons.
+
+The icons used:
 
 | Craft App | Original |
 |---|---|
@@ -21,6 +29,7 @@ which swaps each Craft App's icon for the original program's:
 | GridCraft | Microsoft Excel |
 | CADCraft | AutoCAD |
 
-Fork-only files: `crates/ui-egui/src/better_icons.rs`, `assets/better-icons/`, this file, the sync
-workflow and script. Upstream files touched: one line each in `lib.rs` and `views.rs`, and a hook in
-`icons.rs`. The original icons are trademarks of their owners and are used here for personal use.
+Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/better-icons/`, this file, the sync
+workflow and script. Upstream files touched: one-line hooks in `lib.rs`, `views.rs` (toolbar and
+`grid_block`) and `icons.rs`, plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
+upstream's UI tests keep checking upstream's cards. The original icons are trademarks of their owners and are used here for personal use.

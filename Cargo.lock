@@ -333,6 +333,7 @@ name = "artcraft-launcher-ui-egui"
 version = "0.5.1"
 dependencies = [
  "artcraft-launcher-core",
+ "artcraft-launcher-ui-egui",
  "egui",
  "egui_extras",
  "egui_kittest",

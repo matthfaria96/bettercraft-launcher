@@ -173,7 +173,7 @@ impl LauncherUi {
         let mut compact = false;
         ui.horizontal(|ui| {
             self.refresh_button(ui);
-            crate::better_icons::toggle_button(ui);
+            crate::bettercraft::toolbar(self, ui);
             // Hiding an app is only undone from here, so the way back to the hidden ones stays
             // while there are any: a toggle, lit while the hidden apps are what the page shows.
             if !self.settings.hidden.is_empty() {
@@ -383,6 +383,9 @@ impl LauncherUi {
     }
 
     fn grid_block(&mut self, ui: &mut Ui, ids: &[&'static str]) {
+        if crate::bettercraft::compact::grid_block(self, ui, ids) {
+            return;
+        }
         if ids.is_empty() {
             return;
         }
