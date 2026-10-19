@@ -23,7 +23,7 @@ What it adds:
   entitlements) after the change, and the Craft originals are kept inside the bundle to put back.
   App updates replace the bundle; the launcher dresses the new version within seconds.
 - **Settings → Original icons [ Plain | Craft badge ]**: the original icons as they are, or with a
-  yellow "Craft" side badge (`assets/better-icons-craft/`, made from the plain ones by
+  yellow "CRAFT" corner ribbon (`assets/better-icons-craft/`, made from the plain ones by
   `scripts/make-badged-icons.sh`). Changing it re-dresses the installed apps.
 
 The icons used:

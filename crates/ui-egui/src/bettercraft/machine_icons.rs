@@ -179,8 +179,12 @@ mod imp {
             return Ok(false);
         }
         let patched = dock_icon::is_patched(bundle);
-        let carried = std::fs::read_to_string(style_marker(bundle)).ok().and_then(|k| IconStyle::from_key(&k)).unwrap_or_default();
-        let restyle = mode.icons() && patched && carried != style;
+        // The marker reads "style:revision" ("plain" alone before revisions).
+        let marker = std::fs::read_to_string(style_marker(bundle)).unwrap_or_default();
+        let (key, revision) = marker.trim().split_once(':').unwrap_or((marker.trim(), "1"));
+        let carried = IconStyle::from_key(key).unwrap_or_default();
+        let current = revision == crate::bettercraft::assets::REVISION.to_string();
+        let restyle = mode.icons() && patched && (carried != style || !current);
         let names = mode.names() != has_original_name(bundle);
         let dock = mode.icons() != patched || restyle;
         if names || dock {
@@ -201,7 +205,8 @@ mod imp {
                 }
                 if mode.icons() {
                     dock_icon::set(style, id, bundle, true)?;
-                    std::fs::write(style_marker(bundle), style.key()).map_err(|e| e.to_string())?;
+                    std::fs::write(style_marker(bundle), format!("{}:{}", style.key(), crate::bettercraft::assets::REVISION))
+                        .map_err(|e| e.to_string())?;
                 }
             }
             run("/usr/bin/codesign", &["--force", "--deep", "--preserve-metadata=entitlements,flags", "--sign", "-"], bundle)?;

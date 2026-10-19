@@ -3,6 +3,9 @@
 //! `.icns` for the bundle, a 256 px PNG (the launcher's rows and roomy embedded icons), a PNG that
 //! fits eframe's default icon (the Dock), and 96 / 64 px PNGs for small embedded icons.
 
+/// Bumped whenever the pictures change: installed apps carrying an older revision are re-dressed.
+pub(crate) const REVISION: u32 = 2;
+
 /// How the original programs' icons look: as they are, or with the "Craft" badge.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) enum IconStyle {

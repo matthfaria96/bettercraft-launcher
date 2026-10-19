@@ -23,6 +23,10 @@ const EFRAME_DEFAULT: &[u8] = include_bytes!("../../../../assets/better-icons/do
 const BACKUP: &str = "bettercraft-original.icns";
 /// Where the app's own embedded icons are kept: `bettercraft-runtime-0.png`, `-1`…
 const RUNTIME_PREFIX: &str = "bettercraft-runtime-";
+/// Every offset in the executable this launcher wrote over, and what was there: `offset\tname`,
+/// `name` being [`EFRAME_KEY`] or a `RUNTIME_PREFIX` file.
+const PATCHES: &str = "bettercraft-patches.txt";
+const EFRAME_KEY: &str = "eframe-default";
 /// Below this [`difference`] an embedded picture is taken for the app's own icon. Measured: the
 /// app's icon scores 0.9–1.4 against a reference, everything else in the Craft Apps 29 and up.
 const ALIKE: f32 = 10.0;
@@ -49,30 +53,26 @@ pub(super) fn is_patched(bundle: &Path) -> bool {
 }
 
 /// Puts the original program's Dock icons into the bundle (`on`) or the Craft ones back.
-/// `style` is the style to put in (`on`), or the one that was put in (to take it out).
+/// `style` is the style to put in (`on`), or the one that was put in (to take an older bundle
+/// without a patch list back out).
 pub(super) fn set(style: IconStyle, id: &str, bundle: &Path, on: bool) -> Result<(), String> {
-    let missing = || format!("no Dock icon for {id}");
     let resources = bundle.join("Contents/Resources");
     let icns = resources.join(icon_file(bundle)?);
     let backup = resources.join(BACKUP);
     let exe = bundle.join("Contents/MacOS").join(plist_value(bundle, "CFBundleExecutable")?);
-    let eframe_ours = ours_for(style, id, EFRAME_DEFAULT.len()).ok_or_else(missing)?;
     if on {
         let original = assets::icns(style, id).ok_or_else(|| format!("no original icon for {id}"))?;
         if !backup.exists() {
             std::fs::copy(&icns, &backup).map_err(|e| format!("couldn't keep the Craft icon ({e})"))?;
         }
         std::fs::write(&icns, original).map_err(|e| format!("couldn't write the icon ({e})"))?;
-        replace_in_file(&exe, EFRAME_DEFAULT, &eframe_ours)?;
-        replace_own_icons(style, id, &exe, &backup, &resources)
+        patch_executable(style, id, &exe, &backup, &resources)
     } else {
-        for kept in runtime_backups(&resources) {
-            let craft = std::fs::read(&kept).map_err(|e| e.to_string())?;
-            let ours = ours_for(style, id, craft.len()).ok_or_else(missing)?;
-            replace_in_file(&exe, &ours, &craft)?;
-            std::fs::remove_file(&kept).map_err(|e| e.to_string())?;
+        if resources.join(PATCHES).exists() {
+            restore_executable(&exe, &resources)?;
+        } else {
+            restore_by_content(style, id, &exe, &resources)?;
         }
-        replace_in_file(&exe, &eframe_ours, EFRAME_DEFAULT)?;
         if backup.exists() {
             std::fs::rename(&backup, &icns).map_err(|e| format!("couldn't restore the Craft icon ({e})"))?;
         }
@@ -80,36 +80,100 @@ pub(super) fn set(style: IconStyle, id: &str, bundle: &Path, on: bool) -> Result
     }
 }
 
-/// The app's own icons embedded in `exe` (alike its `.icns`, kept at `craft_icns`, or the Craft
-/// icon the launcher shows, which some versions use instead) are kept in `resources` and replaced
-/// by the original program's.
-fn replace_own_icons(style: IconStyle, id: &str, exe: &Path, craft_icns: &Path, resources: &Path) -> Result<(), String> {
+/// Every offset of `needle` in `hay`.
+fn find_all(hay: &[u8], needle: &[u8]) -> Vec<usize> {
+    if needle.is_empty() {
+        return Vec::new();
+    }
+    hay.windows(needle.len()).enumerate().filter(|(_, w)| *w == needle).map(|(at, _)| at).collect()
+}
+
+/// Copies `to` over `bytes` at `at`, if it fits.
+fn overwrite(bytes: &mut [u8], at: usize, to: &[u8]) -> Result<(), String> {
+    let end = at.checked_add(to.len()).ok_or("offset out of range")?;
+    bytes.get_mut(at..end).ok_or("offset out of range")?.copy_from_slice(to);
+    Ok(())
+}
+
+/// Replaces eframe's default icon and the app's own icons (alike its `.icns`, kept at
+/// `craft_icns`, or the Craft icon the launcher shows) in the executable, keeping each original
+/// in `resources` and every replaced offset in the patch list, so taking it out needs neither
+/// these icons nor their bytes.
+fn patch_executable(style: IconStyle, id: &str, exe: &Path, craft_icns: &Path, resources: &Path) -> Result<(), String> {
     let mut references = vec![icns_picture(craft_icns)?];
     if let Some(egui::ImageSource::Bytes { bytes, .. }) = crate::icons::app(id)
         && let Ok(picture) = image::load_from_memory(bytes.as_ref())
     {
         references.push(picture);
     }
-    let bytes = std::fs::read(exe).map_err(|e| format!("couldn't read {} ({e})", exe.display()))?;
-    let mut own: Vec<&[u8]> = Vec::new();
-    for (at, len) in embedded_pngs(&bytes) {
-        let Some(png) = bytes.get(at..at + len) else { continue };
-        if own.contains(&png) {
+    let original = std::fs::read(exe).map_err(|e| format!("couldn't read {} ({e})", exe.display()))?;
+    // What to replace: eframe's default, then each distinct embedded picture of the app's icon.
+    let mut targets: Vec<(Vec<u8>, String)> = vec![(EFRAME_DEFAULT.to_vec(), EFRAME_KEY.to_string())];
+    let mut n = 0;
+    for (at, len) in embedded_pngs(&original) {
+        let Some(png) = original.get(at..at + len) else { continue };
+        if targets.iter().any(|(t, _)| t == png) {
             continue;
         }
         let Ok(picture) = image::load_from_memory(png) else { continue };
         if picture.width() == picture.height() && picture.width() >= 64 && references.iter().any(|r| difference(&picture, r) < ALIKE) {
-            own.push(png);
+            let name = format!("{RUNTIME_PREFIX}{n}.png");
+            std::fs::write(resources.join(&name), png).map_err(|e| e.to_string())?;
+            targets.push((png.to_vec(), name));
+            n += 1;
         }
     }
-    let mut n = runtime_backups(resources).len();
-    for craft in own {
+    let mut bytes = original.clone();
+    let mut list = String::new();
+    for (craft, name) in &targets {
         let Some(ours) = ours_for(style, id, craft.len()) else { continue };
-        std::fs::write(resources.join(format!("{RUNTIME_PREFIX}{n}.png")), craft).map_err(|e| e.to_string())?;
-        n += 1;
-        replace_in_file(exe, craft, &ours)?;
+        for at in find_all(&original, craft) {
+            overwrite(&mut bytes, at, &ours)?;
+            list.push_str(&format!("{at}\t{name}\n"));
+        }
+    }
+    std::fs::write(resources.join(PATCHES), list).map_err(|e| e.to_string())?;
+    if bytes != original {
+        write_in_place(exe, &bytes)?;
     }
     Ok(())
+}
+
+/// Puts back every original the patch list names, at its offset.
+fn restore_executable(exe: &Path, resources: &Path) -> Result<(), String> {
+    let list = std::fs::read_to_string(resources.join(PATCHES)).map_err(|e| e.to_string())?;
+    let mut bytes = std::fs::read(exe).map_err(|e| format!("couldn't read {} ({e})", exe.display()))?;
+    for line in list.lines() {
+        let Some((at, name)) = line.split_once('\t') else { continue };
+        let at: usize = at.parse().map_err(|_| format!("bad patch list line {line:?}"))?;
+        let original = if name == EFRAME_KEY {
+            EFRAME_DEFAULT.to_vec()
+        } else {
+            if name.contains('/') {
+                return Err(format!("bad patch list line {line:?}"));
+            }
+            std::fs::read(resources.join(name)).map_err(|e| format!("couldn't read the kept icon {name} ({e})"))?
+        };
+        overwrite(&mut bytes, at, &original)?;
+    }
+    write_in_place(exe, &bytes)?;
+    for kept in runtime_backups(resources) {
+        std::fs::remove_file(kept).map_err(|e| e.to_string())?;
+    }
+    std::fs::remove_file(resources.join(PATCHES)).map_err(|e| e.to_string())
+}
+
+/// Bundles patched before the patch list: find our padded icons by their bytes.
+fn restore_by_content(style: IconStyle, id: &str, exe: &Path, resources: &Path) -> Result<(), String> {
+    let missing = || format!("no Dock icon for {id}");
+    for kept in runtime_backups(resources) {
+        let craft = std::fs::read(&kept).map_err(|e| e.to_string())?;
+        let ours = ours_for(style, id, craft.len()).ok_or_else(missing)?;
+        replace_in_file(exe, &ours, &craft)?;
+        std::fs::remove_file(&kept).map_err(|e| e.to_string())?;
+    }
+    let eframe_ours = ours_for(style, id, EFRAME_DEFAULT.len()).ok_or_else(missing)?;
+    replace_in_file(exe, &eframe_ours, EFRAME_DEFAULT)
 }
 
 fn runtime_backups(resources: &Path) -> Vec<PathBuf> {
@@ -208,11 +272,16 @@ fn plist_value(bundle: &Path, key: &str) -> Result<String, String> {
     Ok(value)
 }
 
-/// Replaces every `from` in the file with `to` (same length), writing a new file in its place so a
-/// running copy keeps the old one. Nothing to replace is not an error.
+/// Replaces every `from` in the file with `to` (same length). Nothing to replace is not an error.
 fn replace_in_file(path: &Path, from: &[u8], to: &[u8]) -> Result<(), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("couldn't read {} ({e})", path.display()))?;
     let Some(patched) = replace_all(&bytes, from, to) else { return Ok(()) };
+    write_in_place(path, &patched)
+}
+
+/// Writes `patched` as a new file in `path`'s place, keeping its permissions, so a running copy
+/// keeps the old one.
+fn write_in_place(path: &Path, patched: &[u8]) -> Result<(), String> {
     let temp: PathBuf = path.with_extension("bettercraft-tmp");
     std::fs::write(&temp, patched).map_err(|e| format!("couldn't write {} ({e})", temp.display()))?;
     let permissions = std::fs::metadata(path).map_err(|e| e.to_string())?.permissions();
