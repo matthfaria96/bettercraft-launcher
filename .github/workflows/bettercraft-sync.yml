@@ -22,5 +22,16 @@ jobs:
           git config user.email "bettercraft-sync@users.noreply.github.com"
           git remote add upstream https://github.com/storytold/craft-launcher.git
           git fetch upstream main
-          git merge --no-edit upstream/main
+          # Dependabot stays off in the fork (dependency bumps arrive from upstream), so a change
+          # upstream makes to its config is dropped instead of stopping the merge.
+          if ! git merge --no-edit upstream/main; then
+            if [ "$(git diff --name-only --diff-filter=U)" = ".github/dependabot.yml" ]; then
+              git rm -q .github/dependabot.yml
+              git commit --no-edit
+            else
+              exit 1
+            fi
+          fi
+          git rm -q --ignore-unmatch .github/dependabot.yml
+          git diff --cached --quiet || git commit -m "chore: keep Dependabot off in the fork"
           git push origin HEAD:main
