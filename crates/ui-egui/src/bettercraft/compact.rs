@@ -70,20 +70,22 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
     // Centre the two lines on the row: measure them first, then pad the top by what's left.
     let name_font = FontId::new(15.0, theme::semibold());
     let status_font = FontId::proportional(12.0);
-    let block = text_ui.fonts_mut(|f| f.row_height(&name_font) + LINE_GAP + f.row_height(&status_font));
+    // The second line holds the version and, for an installed app, its badge (20 px tall).
+    let second = if installed { 20.0 } else { text_ui.fonts_mut(|f| f.row_height(&status_font)) };
+    let block = text_ui.fonts_mut(|f| f.row_height(&name_font)) + LINE_GAP + second;
     text_ui.add_space(((ROW_H - block) / 2.0).max(0.0));
     text_ui.spacing_mut().item_spacing.y = LINE_GAP;
     // Rows as tall as their text, not as a button.
     text_ui.spacing_mut().interact_size.y = 0.0;
+    text_ui.add(egui::Label::new(RichText::new(app.name).font(name_font.clone()).color(t.ink_strong)).selectable(false).truncate());
+    let (line, color) = status_line(&entry, &status, launcher.caps.manage_apps, &t);
     text_ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
-        ui.add(egui::Label::new(RichText::new(app.name).font(name_font.clone()).color(t.ink_strong)).selectable(false));
+        ui.add(egui::Label::new(RichText::new(line).font(status_font).color(color)).selectable(false));
         if installed {
             mac_badge(ui, app.id, &t);
         }
     });
-    let (line, color) = status_line(&entry, &status, launcher.caps.manage_apps, &t);
-    text_ui.add(egui::Label::new(RichText::new(line).font(status_font).color(color)).selectable(false).truncate());
 
     let mut actions_ui = ui.new_child(
         egui::UiBuilder::new().max_rect(actions).layout(egui::Layout::left_to_right(egui::Align::Center).with_main_align(egui::Align::Max)),
