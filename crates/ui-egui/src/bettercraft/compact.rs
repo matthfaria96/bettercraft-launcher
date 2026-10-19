@@ -15,10 +15,12 @@ use crate::widgets;
 use artcraft_launcher_core::details::AppDetails;
 
 const ROW_MIN_W: f32 = 460.0;
-const ROW_H: f32 = 64.0;
-const PAD: f32 = 14.0;
-const ICON: f32 = 40.0;
-const ACTIONS_W: f32 = 190.0;
+const ROW_H: f32 = 80.0;
+const PAD: f32 = 20.0;
+const ICON: f32 = 44.0;
+/// Space between the name line and the status line.
+const LINE_GAP: f32 = 6.0;
+const ACTIONS_W: f32 = 212.0;
 
 /// Draws `ids` as compact rows when compact mode is on; false means upstream should draw them.
 pub(crate) fn grid_block(launcher: &mut LauncherUi, ui: &mut Ui, ids: &[&'static str]) -> bool {
@@ -69,20 +71,26 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
     let gap = ui.spacing().item_spacing.x;
     let actions_w = ACTIONS_W + gap + theme::CONTROL_H;
     let actions = Rect::from_min_max(egui::pos2(inner.right() - actions_w, inner.top()), inner.max);
-    let text = Rect::from_min_max(egui::pos2(icon_rect.right() + 12.0, inner.top()), egui::pos2(actions.left() - 8.0, inner.bottom()));
+    let text = Rect::from_min_max(egui::pos2(icon_rect.right() + 14.0, inner.top()), egui::pos2(actions.left() - 16.0, inner.bottom()));
 
     let mut text_ui = ui.new_child(egui::UiBuilder::new().max_rect(text).layout(egui::Layout::top_down(egui::Align::Min)));
     text_ui.set_clip_rect(text.intersect(ui.clip_rect()));
-    text_ui.add_space((ROW_H - 36.0) / 2.0);
-    text_ui.spacing_mut().item_spacing.y = 2.0;
+    // Centre the two lines on the row: measure them first, then pad the top by what's left.
+    let name_font = FontId::new(15.0, theme::semibold());
+    let status_font = FontId::proportional(12.0);
+    let block = text_ui.fonts_mut(|f| f.row_height(&name_font) + LINE_GAP + f.row_height(&status_font));
+    text_ui.add_space(((ROW_H - block) / 2.0).max(0.0));
+    text_ui.spacing_mut().item_spacing.y = LINE_GAP;
+    // Rows as tall as their text, not as a button.
+    text_ui.spacing_mut().interact_size.y = 0.0;
     text_ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
-        ui.add(egui::Label::new(RichText::new(app.name).font(FontId::new(15.0, theme::semibold())).color(t.ink_strong)).selectable(false));
+        ui.add(egui::Label::new(RichText::new(app.name).font(name_font.clone()).color(t.ink_strong)).selectable(false));
         let tagline = tr_ctx(current(), app.id, app.tagline);
         ui.add(egui::Label::new(RichText::new(tagline).size(12.0).color(t.faint)).selectable(false).truncate());
     });
     let (line, color) = status_line(&entry, &status, launcher.caps.manage_apps, &t);
-    text_ui.add(egui::Label::new(RichText::new(line).size(12.0).color(color)).selectable(false).truncate());
+    text_ui.add(egui::Label::new(RichText::new(line).font(status_font).color(color)).selectable(false).truncate());
 
     let mut actions_ui = ui.new_child(
         egui::UiBuilder::new().max_rect(actions).layout(egui::Layout::left_to_right(egui::Align::Center).with_main_align(egui::Align::Max)),
