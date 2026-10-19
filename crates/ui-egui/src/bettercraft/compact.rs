@@ -114,17 +114,16 @@ fn icon_pair(ui: &Ui, id: &str, left_mid: egui::Pos2, in_colour: bool, row_fill:
     craft.union(original)
 }
 
-/// Whether this app carries the original program's look on this Mac: ORIGINAL (green) or CLONE (red), one word
-/// so it never crowds the name; the tooltip says what exactly.
+/// Whether this app carries the launcher's icon on this Mac: NEW / STUDY (green) or CLONE (red),
+/// one word so it never crowds the name; the tooltip says what exactly.
 fn mac_badge(ui: &mut Ui, id: &str, t: &Tokens) {
     let Some(state) = super::machine_icons::app_state(id) else { return };
     let tip = match (state.icons, state.names) {
-        (true, true) => super::say("Original icon and name on this Mac", "Ícone e nome originais neste Mac"),
-        (true, false) => super::say("Original icon on this Mac", "Ícone original neste Mac"),
-        (false, true) => super::say("Original name on this Mac", "Nome original neste Mac"),
-        (false, false) => super::say("Craft icon and name on this Mac", "Ícone e nome Craft neste Mac"),
+        (true, true) => super::say("Study icon and name on this Mac", "Ícone e nome de estudo neste Mac"),
+        (true, false) => super::say("BetterCraft icon on this Mac", "Ícone BetterCraft neste Mac"),
+        (false, _) => super::say("The app's own icon on this Mac", "Ícone do próprio app neste Mac"),
     };
-    let (text, color) = if state.icons && state.names { ("Original", t.good) } else { ("Clone", t.bad) };
+    let (text, color) = if state.icons { (super::custom_label(), t.good) } else { ("Clone", t.bad) };
     widgets::badge(ui, text, color).on_hover_text(tip);
 }
 

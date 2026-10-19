@@ -25,7 +25,7 @@ pub fn name(id: &str) -> Option<&'static str> {
 
 /// The original program's icon for a Craft App id, in the style chosen in Settings.
 pub fn app(id: &str) -> Option<ImageSource<'static>> {
-    super::assets::image(super::icon_style(), id)
+    super::assets::image(super::icon_set(), id)
 }
 
 #[cfg(test)]

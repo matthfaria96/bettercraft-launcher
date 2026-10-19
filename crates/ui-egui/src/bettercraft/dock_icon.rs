@@ -15,10 +15,10 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::assets::{self, IconStyle};
+use super::assets::{self, IconSet};
 
 /// eframe 0.36's default app icon, as embedded in every eframe executable.
-const EFRAME_DEFAULT: &[u8] = include_bytes!("../../../../assets/better-icons/dock/eframe-default.png");
+const EFRAME_DEFAULT: &[u8] = include_bytes!("../../../../assets/bettercraft/eframe-default.png");
 /// Where the bundle's own `.icns` is kept while the original program's is in its place.
 const BACKUP: &str = "bettercraft-original.icns";
 /// Where the app's own embedded icons are kept: `bettercraft-runtime-0.png`, `-1`…
@@ -33,7 +33,7 @@ const ALIKE: f32 = 10.0;
 
 /// The best of the original program's icons (in `style`) that fits in `len` bytes, padded with
 /// zeros to `len`.
-fn ours_for(style: IconStyle, id: &str, len: usize) -> Option<Vec<u8>> {
+fn ours_for(style: IconSet, id: &str, len: usize) -> Option<Vec<u8>> {
     [assets::png256(style, id), assets::dock(style, id), assets::png96(style, id), assets::png64(style, id)]
         .into_iter()
         .flatten()
@@ -55,7 +55,7 @@ pub(super) fn is_patched(bundle: &Path) -> bool {
 /// Puts the original program's Dock icons into the bundle (`on`) or the Craft ones back.
 /// `style` is the style to put in (`on`), or the one that was put in (to take an older bundle
 /// without a patch list back out).
-pub(super) fn set(style: IconStyle, id: &str, bundle: &Path, on: bool) -> Result<(), String> {
+pub(super) fn set(style: IconSet, id: &str, bundle: &Path, on: bool) -> Result<(), String> {
     let resources = bundle.join("Contents/Resources");
     let icns = resources.join(icon_file(bundle)?);
     let backup = resources.join(BACKUP);
@@ -99,7 +99,7 @@ fn overwrite(bytes: &mut [u8], at: usize, to: &[u8]) -> Result<(), String> {
 /// `craft_icns`, or the Craft icon the launcher shows) in the executable, keeping each original
 /// in `resources` and every replaced offset in the patch list, so taking it out needs neither
 /// these icons nor their bytes.
-fn patch_executable(style: IconStyle, id: &str, exe: &Path, craft_icns: &Path, resources: &Path) -> Result<(), String> {
+fn patch_executable(style: IconSet, id: &str, exe: &Path, craft_icns: &Path, resources: &Path) -> Result<(), String> {
     let mut references = vec![icns_picture(craft_icns)?];
     if let Some(egui::ImageSource::Bytes { bytes, .. }) = crate::icons::app(id)
         && let Ok(picture) = image::load_from_memory(bytes.as_ref())
@@ -164,7 +164,7 @@ fn restore_executable(exe: &Path, resources: &Path) -> Result<(), String> {
 }
 
 /// Bundles patched before the patch list: find our padded icons by their bytes.
-fn restore_by_content(style: IconStyle, id: &str, exe: &Path, resources: &Path) -> Result<(), String> {
+fn restore_by_content(style: IconSet, id: &str, exe: &Path, resources: &Path) -> Result<(), String> {
     let missing = || format!("no Dock icon for {id}");
     for kept in runtime_backups(resources) {
         let craft = std::fs::read(&kept).map_err(|e| e.to_string())?;
@@ -309,7 +309,7 @@ fn replace_all(bytes: &[u8], from: &[u8], to: &[u8]) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{EFRAME_DEFAULT, IconStyle, ours_for, replace_all};
+    use super::{EFRAME_DEFAULT, IconSet, ours_for, replace_all};
 
     const IDS: [&str; 13] = [
         "photocraft",
@@ -330,7 +330,7 @@ mod tests {
     #[test]
     fn every_dock_icon_fits_and_still_decodes_with_its_padding() {
         // eframe unwraps the decode of its default icon: a bad PNG here would crash the app.
-        for style in IconStyle::ALL {
+        for style in IconSet::ALL {
             for id in IDS {
                 let bytes = ours_for(style, id, EFRAME_DEFAULT.len()).unwrap_or_else(|| panic!("{style:?} {id} doesn't fit"));
                 assert_eq!(bytes.len(), EFRAME_DEFAULT.len(), "{id}");
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn replacing_swaps_every_copy_and_back() {
-        let ours = ours_for(IconStyle::Plain, "photocraft", EFRAME_DEFAULT.len()).unwrap();
+        let ours = ours_for(IconSet::Craft, "photocraft", EFRAME_DEFAULT.len()).unwrap();
         let exe = [b"head".as_slice(), EFRAME_DEFAULT, b"mid", EFRAME_DEFAULT, b"tail"].concat();
         let patched = replace_all(&exe, EFRAME_DEFAULT, &ours).unwrap();
         assert_eq!(patched.len(), exe.len());

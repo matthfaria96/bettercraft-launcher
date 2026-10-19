@@ -30,8 +30,6 @@ pub(super) struct Status {
     pub busy: bool,
     /// Installed apps that carry the original icon.
     pub icons: usize,
-    /// Installed apps that carry the original name.
-    pub names: usize,
     /// Installed `.app` bundles.
     pub total: usize,
     /// Each installed app's id and what it carries, for the badge on its row.
@@ -73,7 +71,7 @@ mod imp {
     use super::{AppState, Status};
     use crate::LauncherUi;
     use crate::bettercraft::MacMode;
-    use crate::bettercraft::assets::IconStyle;
+    use crate::bettercraft::assets::IconSet;
 
     const RECHECK: Duration = Duration::from_secs(5);
 
@@ -103,7 +101,7 @@ mod imp {
             return;
         }
         let mode = super::super::mac_mode();
-        let style = super::super::icon_style();
+        let style = super::super::icon_set();
         let apps: Vec<(String, PathBuf)> = launcher
             .entries
             .iter()
@@ -145,9 +143,8 @@ mod imp {
                 })
                 .collect();
             let icons = states.iter().filter(|(_, s)| s.icons).count();
-            let names = states.iter().filter(|(_, s)| s.names).count();
             if let Ok(mut s) = STATUS.lock() {
-                *s = Some(Status { busy: false, icons, names, total: apps.len(), error, apps: states });
+                *s = Some(Status { busy: false, icons, total: apps.len(), error, apps: states });
             }
             BUSY.store(false, Ordering::Release);
         });
@@ -167,13 +164,13 @@ mod imp {
         bundle.join("Icon\r").exists()
     }
 
-    /// Which icon style the bundle carries, written next to the icons it got.
+    /// Which icon set the bundle carries ("set:revision"), written next to the icons it got.
     fn style_marker(bundle: &Path) -> PathBuf {
         bundle.join("Contents/Resources/bettercraft-style")
     }
 
     /// Brings one bundle in line with `mode` and `style`. Returns true when its Dock icon changed.
-    fn apply(id: &str, bundle: &Path, mode: MacMode, style: IconStyle) -> Result<bool, String> {
+    fn apply(id: &str, bundle: &Path, mode: MacMode, style: IconSet) -> Result<bool, String> {
         use crate::bettercraft::dock_icon;
         if !bundle.is_dir() {
             return Ok(false);
@@ -182,10 +179,11 @@ mod imp {
         // The marker reads "style:revision" ("plain" alone before revisions).
         let marker = std::fs::read_to_string(style_marker(bundle)).unwrap_or_default();
         let (key, revision) = marker.trim().split_once(':').unwrap_or((marker.trim(), "1"));
-        let carried = IconStyle::from_key(key).unwrap_or_default();
+        let carried = IconSet::from_key(key).unwrap_or_default();
         let current = revision == crate::bettercraft::assets::REVISION.to_string();
         let restyle = mode.icons() && patched && (carried != style || !current);
-        let names = mode.names() != has_original_name(bundle);
+        let want_names = mode.icons() && style.names();
+        let names = want_names != has_original_name(bundle);
         let dock = mode.icons() != patched || restyle;
         if names || dock {
             // codesign refuses a bundle with a custom icon: clear it, sign, then put it back.
@@ -195,7 +193,7 @@ mod imp {
             let _ = std::fs::remove_file(bundle.join("Icon\r"));
             run("/usr/bin/xattr", &["-cr"], bundle)?;
             if names {
-                set_name(id, bundle, mode.names())?;
+                set_name(id, bundle, want_names)?;
             }
             if dock {
                 if patched {
@@ -218,7 +216,7 @@ mod imp {
         Ok(dock)
     }
 
-    fn set_icon(style: IconStyle, id: &str, bundle: &Path, on: bool) -> Result<(), String> {
+    fn set_icon(style: IconSet, id: &str, bundle: &Path, on: bool) -> Result<(), String> {
         let icon = if on { write_icns(style, id)?.display().to_string() } else { String::new() };
         let out =
             Command::new("/usr/bin/osascript").args(["-l", "JavaScript", "-e", SET_ICON, &icon]).arg(bundle).output().map_err(|e| e.to_string())?;
@@ -291,7 +289,7 @@ mod imp {
     }
 
     /// The bundled `.icns` for `id`, written to a temporary folder for AppKit to read.
-    fn write_icns(style: IconStyle, id: &str) -> Result<PathBuf, String> {
+    fn write_icns(style: IconSet, id: &str) -> Result<PathBuf, String> {
         let bytes = crate::bettercraft::assets::icns(style, id).ok_or_else(|| format!("no original icon for {id}"))?;
         let dir = std::env::temp_dir().join("bettercraft-icons");
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;

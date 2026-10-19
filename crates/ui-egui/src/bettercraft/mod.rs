@@ -16,7 +16,7 @@ use egui::Ui;
 
 use crate::LauncherUi;
 use crate::widgets;
-use assets::IconStyle;
+use assets::IconSet;
 
 pub(crate) mod assets;
 pub(crate) mod compact;
@@ -83,65 +83,60 @@ pub(crate) fn fork() -> bool {
     !cfg!(feature = "upstream-look")
 }
 
-/// What the installed apps look like on this Mac: as the Craft clones they are, or as the
-/// original programs (icon and name together).
+/// Whether the installed apps get the launcher's icons on this Mac: as they come (Clone), or with
+/// the icons of the chosen [`IconSet`] (and, for the study set, its names).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum MacMode {
     Clone,
-    Original,
+    Custom,
 }
 
 impl MacMode {
     pub(crate) fn icons(self) -> bool {
-        self == Self::Original
-    }
-
-    pub(crate) fn names(self) -> bool {
-        self == Self::Original
+        self == Self::Custom
     }
 }
 
 const MODE_KEY: &str = "bettercraft-mac-mode";
 /// The on/off file of the version with icons only; read when there is no mode yet.
 const OLD_ICONS_KEY: &str = "bettercraft-original-icons";
-const STYLE_KEY: &str = "bettercraft-icon-style";
-static ORIGINAL: AtomicBool = AtomicBool::new(false);
-static CRAFT_BADGE: AtomicBool = AtomicBool::new(false);
+const SET_KEY: &str = "bettercraft-icon-set";
+static CUSTOM: AtomicBool = AtomicBool::new(false);
+static STUDY: AtomicBool = AtomicBool::new(false);
 static LOADED: AtomicBool = AtomicBool::new(false);
-/// Set when the style changes in Settings: the next toolbar pass re-dresses the apps at once.
-static RESTYLED: AtomicBool = AtomicBool::new(false);
+/// Set when the icon set changes in Settings: the next toolbar pass re-dresses the apps at once.
+static RESET: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn mac_mode() -> MacMode {
-    if ORIGINAL.load(Ordering::Relaxed) { MacMode::Original } else { MacMode::Clone }
+    if CUSTOM.load(Ordering::Relaxed) { MacMode::Custom } else { MacMode::Clone }
 }
 
-pub(crate) fn icon_style() -> IconStyle {
-    if CRAFT_BADGE.load(Ordering::Relaxed) { IconStyle::Craft } else { IconStyle::Plain }
+pub(crate) fn icon_set() -> IconSet {
+    if STUDY.load(Ordering::Relaxed) { IconSet::Study } else { IconSet::Craft }
 }
 
 fn load_choices() {
     if LOADED.swap(true, Ordering::Relaxed) {
         return;
     }
-    // "1" (icons) and "2" (icons and names) were the modes before Original covered both.
-    let original = match store::read_text(MODE_KEY).as_deref().map(str::trim) {
+    let custom = match store::read_text(MODE_KEY).as_deref().map(str::trim) {
         Some(n) => n == "1" || n == "2",
         None => store::read(OLD_ICONS_KEY) == Some(true),
     };
-    ORIGINAL.store(original, Ordering::Relaxed);
-    let style = store::read_text(STYLE_KEY).as_deref().and_then(IconStyle::from_key).unwrap_or_default();
-    CRAFT_BADGE.store(style == IconStyle::Craft, Ordering::Relaxed);
+    CUSTOM.store(custom, Ordering::Relaxed);
+    let set = store::read_text(SET_KEY).as_deref().and_then(IconSet::from_key).unwrap_or_default();
+    STUDY.store(set == IconSet::Study, Ordering::Relaxed);
 }
 
 fn set_mac_mode(mode: MacMode) {
-    ORIGINAL.store(mode == MacMode::Original, Ordering::Relaxed);
-    store::write_text(MODE_KEY, if mode == MacMode::Original { "2" } else { "0" });
+    CUSTOM.store(mode == MacMode::Custom, Ordering::Relaxed);
+    store::write_text(MODE_KEY, if mode == MacMode::Custom { "2" } else { "0" });
 }
 
-fn set_icon_style(style: IconStyle) {
-    CRAFT_BADGE.store(style == IconStyle::Craft, Ordering::Relaxed);
-    store::write_text(STYLE_KEY, style.key());
-    RESTYLED.store(true, Ordering::Relaxed);
+fn set_icon_set(set: IconSet) {
+    STUDY.store(set == IconSet::Study, Ordering::Relaxed);
+    store::write_text(SET_KEY, set.key());
+    RESET.store(true, Ordering::Relaxed);
 }
 
 /// English, or Portuguese when the launcher is in Portuguese (the fork's strings are not in
@@ -150,31 +145,45 @@ fn say(en: &'static str, pt: &'static str) -> &'static str {
     if crate::i18n::current().code().starts_with("pt") { pt } else { en }
 }
 
+/// The label of the "custom" choice and badge: NEW for the official set, STUDY for the other.
+pub(crate) fn custom_label() -> &'static str {
+    match icon_set() {
+        IconSet::Craft => say("New", "Novo"),
+        IconSet::Study => say("Study", "Estudo"),
+    }
+}
+
 /// The fork's toolbar control, drawn after upstream's refresh button. Also keeps the installed
 /// apps in step with the choice.
 pub(crate) fn toolbar(launcher: &LauncherUi, ui: &mut Ui) {
     load_choices();
-    let changed = mac_mode_picker(ui) | RESTYLED.swap(false, Ordering::Relaxed);
+    let changed = mac_mode_picker(ui) | RESET.swap(false, Ordering::Relaxed);
     machine_icons::sync(launcher, changed);
     if machine_icons::status().busy {
         ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
     }
 }
 
-/// "On this Mac  [ Clone | Original ]": what the installed apps look like in Finder, Launchpad
-/// and the Dock. The caption shows "…" while the apps are being changed, and its tooltip how many
-/// are done. Returns true when the choice changed.
+/// "Mac icons  [ Clone | New ]": whether the installed apps carry the launcher's icons in
+/// Finder, Launchpad and the Dock. "…" while the apps are being changed; the tooltip says how
+/// many are done. Returns true when the choice changed.
 fn mac_mode_picker(ui: &mut Ui) -> bool {
     let t = crate::theme::Tokens::get(ui.ctx());
     let status = machine_icons::status();
-    let caption = if status.busy { say("On this Mac …", "No Mac …") } else { say("On this Mac", "No Mac") };
-    let mut tip = say(
-        "How the installed apps look in Finder, Launchpad and the Dock: as the Craft clones, or with the original programs' icons and names.",
-        "Como os apps instalados aparecem no Finder, no Launchpad e no Dock: como os clones Craft, ou com o ícone e o nome dos programas originais.",
-    )
+    let caption = if status.busy { say("Mac icons …", "Ícones no Mac …") } else { say("Mac icons", "Ícones no Mac") };
+    let mut tip = match icon_set() {
+        IconSet::Craft => say(
+            "Clone: the apps as they come. New: the BetterCraft icons in Finder, Launchpad and the Dock (names stay).",
+            "Clone: os apps como vêm. Novo: os ícones BetterCraft no Finder, no Launchpad e no Dock (os nomes ficam).",
+        ),
+        IconSet::Study => say(
+            "Study mode (unofficial, set in Settings): the original programs' icons with the CRAFT ribbon, and their names.",
+            "Modo estudo (não oficial, nas Configurações): ícones dos programas originais com a fita CRAFT, e os nomes deles.",
+        ),
+    }
     .to_string();
     if status.total > 0 {
-        tip.push_str(&format!("\n{} {}/{}", say("Original:", "Original:"), status.icons.min(status.names), status.total));
+        tip.push_str(&format!("\n{} {}/{}", custom_label(), status.icons, status.total));
     }
     if let Some(error) = &status.error {
         tip.push_str(&format!("\n{} {error}", say("Last error:", "Último erro:")));
@@ -183,8 +192,8 @@ fn mac_mode_picker(ui: &mut Ui) -> bool {
     let mut mode = mac_mode();
     let cell = |label, tip| widgets::Cell { label, tip, count: None };
     let options = [
-        (MacMode::Clone, cell(say("Clone", "Clone"), say("Craft icons and names", "Ícones e nomes Craft"))),
-        (MacMode::Original, cell(say("Original", "Original"), say("The original programs' icons and names", "Ícone e nome dos programas originais"))),
+        (MacMode::Clone, cell(say("Clone", "Clone"), say("The apps' own icons", "Os ícones dos próprios apps"))),
+        (MacMode::Custom, cell(custom_label(), &tip)),
     ];
     let changed = widgets::cells(ui, &mut mode, &options);
     if changed {
@@ -194,39 +203,94 @@ fn mac_mode_picker(ui: &mut Ui) -> bool {
     changed
 }
 
-/// The Settings panel for the original icons' style: plain, or with the yellow "Craft" badge.
+/// The Settings panel: the official Normal set or the unofficial Study set, as two cards showing
+/// their icons; the chosen one is outlined in the accent colour and ticked.
 pub(crate) fn settings_panel(ui: &mut Ui) {
     load_choices();
-    crate::sheet::panel(ui, say("Original icons", "Ícones originais"), |ui| {
-        let mut style = icon_style();
-        let cell = |label, tip| widgets::Cell { label, tip, count: None };
-        let options = [
+    crate::sheet::panel(ui, say("Icons on this Mac", "Ícones no Mac"), |ui| {
+        let current = icon_set();
+        let gap = 10.0;
+        let width = ((ui.available_width() - gap) / 2.0).max(140.0);
+        let cards = [
             (
-                IconStyle::Plain,
-                cell(say("Plain", "Simples"), say("The original programs' icons as they are", "Os ícones dos programas originais como são")),
+                IconSet::Craft,
+                say("Normal", "Normal"),
+                say("Official", "Oficial"),
+                say("BetterCraft icons. The apps keep their names.", "Ícones BetterCraft. Os apps mantêm seus nomes."),
             ),
             (
-                IconStyle::Craft,
-                cell(say("Craft badge", "Selo Craft"), say("With a yellow \"Craft\" badge on the side", "Com um selo amarelo \"Craft\" na lateral")),
+                IconSet::Study,
+                say("Study", "Estudo"),
+                say("Unofficial · test", "Não oficial · teste"),
+                say(
+                    "The original programs' icons with the CRAFT ribbon, and their names.",
+                    "Ícones dos programas originais com a fita CRAFT, e os nomes deles.",
+                ),
             ),
         ];
-        ui.horizontal(|ui| {
-            if widgets::cells(ui, &mut style, &options) {
-                set_icon_style(style);
+        ui.horizontal_top(|ui| {
+            ui.spacing_mut().item_spacing.x = gap;
+            for (set, title, tag, text) in cards {
+                if set_card(ui, set, current == set, title, tag, text, width) && current != set {
+                    set_icon_set(set);
+                }
             }
         });
-        if let Some(preview) = icons::app("photocraft") {
-            ui.add_space(6.0);
-            ui.add(egui::Image::new(preview).fit_to_exact_size(egui::vec2(56.0, 56.0)));
-        }
         let t = crate::theme::Tokens::get(ui.ctx());
+        ui.add_space(4.0);
         ui.label(
             egui::RichText::new(say(
-                "Used in this list and, in Original mode, on the installed apps.",
-                "Usado nesta lista e, no modo Original, nos apps instalados.",
+                "Applied to the installed apps while \"Mac icons\" is on New / Study.",
+                "Aplicado aos apps instalados quando \"Ícones no Mac\" está em Novo / Estudo.",
             ))
             .size(12.0)
             .color(t.muted),
         );
     });
+}
+
+/// One card of [`settings_panel`]. Returns true when clicked.
+fn set_card(ui: &mut Ui, set: IconSet, chosen: bool, title: &str, tag: &str, text: &str, width: f32) -> bool {
+    use egui::{CornerRadius, FontId, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
+    let t = crate::theme::Tokens::get(ui.ctx());
+    let (rect, resp) = ui.allocate_exact_size(vec2(width, 196.0), Sense::click());
+    let hovered = resp.hovered();
+    let fill = if chosen {
+        t.accent.gamma_multiply(0.12)
+    } else if hovered {
+        t.sunken
+    } else {
+        t.bg
+    };
+    let stroke = if chosen { Stroke::new(2.0, t.accent) } else { t.hairline() };
+    let p = ui.painter();
+    p.rect(rect, CornerRadius::ZERO, fill, stroke, StrokeKind::Inside);
+    // Three of the set's icons, side by side.
+    let icon = 44.0;
+    for (i, id) in ["photocraft", "gridcraft", "wordcraft"].iter().enumerate() {
+        if let Some(src) = assets::image(set, id) {
+            let at = Rect::from_min_size(pos2(rect.left() + 14.0 + i as f32 * (icon + 6.0), rect.top() + 14.0), vec2(icon, icon));
+            egui::Image::new(src).paint_at(ui, at);
+        }
+    }
+    // A tick in a filled circle on the chosen card, an empty ring on the other.
+    let c = pos2(rect.right() - 20.0, rect.top() + 20.0);
+    if chosen {
+        p.circle_filled(c, 10.0, t.accent);
+        p.text(c, egui::Align2::CENTER_CENTER, "✓", FontId::proportional(13.0), t.accent_ink);
+    } else {
+        p.circle_stroke(c, 10.0, Stroke::new(1.5, t.muted));
+    }
+    let left = rect.left() + 14.0;
+    let mut y = rect.top() + 14.0 + icon + 12.0;
+    let title_g = p.layout_no_wrap(title.to_string(), FontId::new(17.0, crate::theme::semibold()), t.ink_strong);
+    let title_h = title_g.size().y;
+    p.galley(pos2(left, y), title_g, t.ink_strong);
+    let tag_color = if set == IconSet::Study { t.warn } else { t.good };
+    p.text(pos2(left, y + title_h + 2.0), egui::Align2::LEFT_TOP, tag.to_uppercase(), FontId::new(10.0, crate::theme::mono()), tag_color);
+    y += title_h + 18.0;
+    let text_g = p.layout(text.to_string(), FontId::proportional(12.0), t.muted, rect.width() - 28.0);
+    p.galley(pos2(left, y), text_g, t.muted);
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::RadioButton, true, chosen, title));
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked()
 }

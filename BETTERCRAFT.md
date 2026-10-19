@@ -12,23 +12,25 @@ installing, then dresses the new version within seconds.
 
 What it adds:
 
-- **Compact rows** (always on, no button): one slim row per app with its icon pair (the Craft icon small and
-  behind, the original program's icon it gets on the Mac larger and in front), name, one status
-  line and the main button, instead of the tall cards.
-- **On this Mac [ Clone | Original ]** (toolbar): *Original* gives every installed app the original
-  program's icon and name (e.g. PhotoCraft → Adobe Photoshop) in Finder, Launchpad and the Dock,
-  including the Dock icon of a running app; *Clone* puts the Craft look back. Each installed row
-  shows ORIGINAL (green) or CLONE (red). The `.app` keeps its file name and its version keys, so
-  the launcher still finds, checks and updates it; the app is re-signed ad hoc (keeping its
-  entitlements) after the change, and the Craft originals are kept inside the bundle to put back.
-  App updates replace the bundle; the launcher dresses the new version within seconds.
-- **Settings → Original icons [ Plain | Craft badge ]**: the original icons as they are, or with a
-  yellow "CRAFT" corner ribbon (`assets/better-icons-craft/`, made from the plain ones by
-  `scripts/make-badged-icons.sh`). Changing it re-dresses the installed apps.
+- **Mac icons [ Clone | New ]** (toolbar): *New* gives every installed Craft App the BetterCraft
+  icon (`assets/craft-icons/`, from `scripts/make-craft-icons.sh`) in Finder, Launchpad and the
+  Dock, including the Dock icon of a running app; the apps keep their names. *Clone* puts each
+  app's own icon back. Each installed row shows NEW (green) or CLONE (red).
+- **Settings → Mac icons: Normal | Study** (two cards with previews): *Normal* is the official look
+  above. *Study* (unofficial, for testing) uses the original programs' icons with a yellow CRAFT
+  corner ribbon (`assets/study-icons/`, from `scripts/make-study-icons.sh`) and shows the original
+  programs' names (e.g. PhotoCraft → Adobe Photoshop) through a localized display name. Switching
+  re-dresses the installed apps at once.
 
-The icons used:
+How it stays safe: the `.app` keeps its file name and version keys, so the launcher still finds,
+checks and updates it. After a change the app is re-signed ad hoc (keeping its entitlements). The
+Craft originals (bundle `.icns`, the icons embedded in the executable, with their offsets) are kept
+inside the bundle, so going back never depends on the icon pictures. App updates replace the
+bundle; the launcher dresses the new version within seconds and never touches an app mid-update.
 
-| Craft App | Original program (icon and name) |
+Study set (original program and name for each Craft App):
+
+| Craft App | Original program |
 |---|---|
 | PhotoCraft | Adobe Photoshop |
 | VectorCraft | Adobe Illustrator |

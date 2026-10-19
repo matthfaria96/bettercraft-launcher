@@ -1,244 +1,263 @@
-//! The original programs' icons, in two styles: plain, or with the yellow "Craft" side badge
-//! (`assets/better-icons-craft/`, made by `scripts/make-badged-icons.sh`). Each comes as the
-//! `.icns` for the bundle, a 256 px PNG (the launcher's rows and roomy embedded icons), a PNG that
-//! fits eframe's default icon (the Dock), and 96 / 64 px PNGs for small embedded icons.
+//! The two icon sets the launcher can give the installed apps:
+//!
+//! - [`IconSet::Craft`], the official look: the BetterCraft icons for each Craft App
+//!   (`assets/craft-icons/`, from `scripts/make-craft-icons.sh`); the apps keep their names.
+//! - [`IconSet::Study`], unofficial, for study and testing: the original programs' icons with the
+//!   CRAFT corner ribbon (`assets/study-icons/`, from `scripts/make-study-icons.sh`), and their names.
+//!
+//! Each comes as the `.icns` for the bundle, a 256 px PNG (the launcher's rows and roomy embedded
+//! icons), a PNG that fits eframe's default icon (the Dock), and 96 / 64 px PNGs.
 
 /// Bumped whenever the pictures change: installed apps carrying an older revision are re-dressed.
-pub(crate) const REVISION: u32 = 2;
+pub(crate) const REVISION: u32 = 3;
 
-/// How the original programs' icons look: as they are, or with the "Craft" badge.
+/// Which icons (and names) the installed apps get.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) enum IconStyle {
+pub(crate) enum IconSet {
+    /// The official BetterCraft icons; names stay.
     #[default]
-    Plain,
     Craft,
+    /// The original programs' icons with the CRAFT ribbon, and their names.
+    Study,
 }
 
-impl IconStyle {
-    pub(crate) const ALL: [Self; 2] = [Self::Plain, Self::Craft];
+impl IconSet {
+    #[cfg(test)]
+    pub(crate) const ALL: [Self; 2] = [Self::Craft, Self::Study];
 
     pub(crate) fn key(self) -> &'static str {
         match self {
-            Self::Plain => "plain",
-            Self::Craft => "craft",
+            Self::Craft => "normal",
+            Self::Study => "study",
         }
     }
 
+    /// Also reads the markers of earlier versions, which only had the original programs' icons
+    /// ("plain", or "craft" for the ribboned ones).
     pub(crate) fn from_key(key: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|s| s.key() == key.trim())
+        match key.trim() {
+            "normal" => Some(Self::Craft),
+            "study" | "craft" | "plain" => Some(Self::Study),
+            _ => None,
+        }
+    }
+
+    /// Whether this set also gives the apps the original programs' names.
+    pub(crate) fn names(self) -> bool {
+        self == Self::Study
     }
 }
 
 /// The 256 px icon as an egui image (one copy of the bytes, shared with [`png256`]).
-pub(crate) fn image(style: IconStyle, id: &str) -> Option<egui::ImageSource<'static>> {
-    let uri = match (style, id) {
-        (IconStyle::Plain, "photocraft") => "bytes://bettercraft/better-icons/photocraft.png",
-        (IconStyle::Plain, "vectorcraft") => "bytes://bettercraft/better-icons/vectorcraft.png",
-        (IconStyle::Plain, "filmcraft") => "bytes://bettercraft/better-icons/filmcraft.png",
-        (IconStyle::Plain, "lightcraft") => "bytes://bettercraft/better-icons/lightcraft.png",
-        (IconStyle::Plain, "pdfcraft") => "bytes://bettercraft/better-icons/pdfcraft.png",
-        (IconStyle::Plain, "effectcraft") => "bytes://bettercraft/better-icons/effectcraft.png",
-        (IconStyle::Plain, "designcraft") => "bytes://bettercraft/better-icons/designcraft.png",
-        (IconStyle::Plain, "wordcraft") => "bytes://bettercraft/better-icons/wordcraft.png",
-        (IconStyle::Plain, "deckcraft") => "bytes://bettercraft/better-icons/deckcraft.png",
-        (IconStyle::Plain, "gridcraft") => "bytes://bettercraft/better-icons/gridcraft.png",
-        (IconStyle::Plain, "cadcraft") => "bytes://bettercraft/better-icons/cadcraft.png",
-        (IconStyle::Plain, "soundcraft") => "bytes://bettercraft/better-icons/soundcraft.png",
-        (IconStyle::Plain, "figcraft") => "bytes://bettercraft/better-icons/figcraft.png",
-        (IconStyle::Craft, "photocraft") => "bytes://bettercraft/better-icons-craft/photocraft.png",
-        (IconStyle::Craft, "vectorcraft") => "bytes://bettercraft/better-icons-craft/vectorcraft.png",
-        (IconStyle::Craft, "filmcraft") => "bytes://bettercraft/better-icons-craft/filmcraft.png",
-        (IconStyle::Craft, "lightcraft") => "bytes://bettercraft/better-icons-craft/lightcraft.png",
-        (IconStyle::Craft, "pdfcraft") => "bytes://bettercraft/better-icons-craft/pdfcraft.png",
-        (IconStyle::Craft, "effectcraft") => "bytes://bettercraft/better-icons-craft/effectcraft.png",
-        (IconStyle::Craft, "designcraft") => "bytes://bettercraft/better-icons-craft/designcraft.png",
-        (IconStyle::Craft, "wordcraft") => "bytes://bettercraft/better-icons-craft/wordcraft.png",
-        (IconStyle::Craft, "deckcraft") => "bytes://bettercraft/better-icons-craft/deckcraft.png",
-        (IconStyle::Craft, "gridcraft") => "bytes://bettercraft/better-icons-craft/gridcraft.png",
-        (IconStyle::Craft, "cadcraft") => "bytes://bettercraft/better-icons-craft/cadcraft.png",
-        (IconStyle::Craft, "soundcraft") => "bytes://bettercraft/better-icons-craft/soundcraft.png",
-        (IconStyle::Craft, "figcraft") => "bytes://bettercraft/better-icons-craft/figcraft.png",
+pub(crate) fn image(set: IconSet, id: &str) -> Option<egui::ImageSource<'static>> {
+    let uri = match (set, id) {
+        (IconSet::Craft, "photocraft") => "bytes://bettercraft/craft-icons/photocraft.png",
+        (IconSet::Craft, "vectorcraft") => "bytes://bettercraft/craft-icons/vectorcraft.png",
+        (IconSet::Craft, "filmcraft") => "bytes://bettercraft/craft-icons/filmcraft.png",
+        (IconSet::Craft, "lightcraft") => "bytes://bettercraft/craft-icons/lightcraft.png",
+        (IconSet::Craft, "pdfcraft") => "bytes://bettercraft/craft-icons/pdfcraft.png",
+        (IconSet::Craft, "effectcraft") => "bytes://bettercraft/craft-icons/effectcraft.png",
+        (IconSet::Craft, "designcraft") => "bytes://bettercraft/craft-icons/designcraft.png",
+        (IconSet::Craft, "wordcraft") => "bytes://bettercraft/craft-icons/wordcraft.png",
+        (IconSet::Craft, "deckcraft") => "bytes://bettercraft/craft-icons/deckcraft.png",
+        (IconSet::Craft, "gridcraft") => "bytes://bettercraft/craft-icons/gridcraft.png",
+        (IconSet::Craft, "cadcraft") => "bytes://bettercraft/craft-icons/cadcraft.png",
+        (IconSet::Craft, "soundcraft") => "bytes://bettercraft/craft-icons/soundcraft.png",
+        (IconSet::Craft, "figcraft") => "bytes://bettercraft/craft-icons/figcraft.png",
+        (IconSet::Study, "photocraft") => "bytes://bettercraft/study-icons/photocraft.png",
+        (IconSet::Study, "vectorcraft") => "bytes://bettercraft/study-icons/vectorcraft.png",
+        (IconSet::Study, "filmcraft") => "bytes://bettercraft/study-icons/filmcraft.png",
+        (IconSet::Study, "lightcraft") => "bytes://bettercraft/study-icons/lightcraft.png",
+        (IconSet::Study, "pdfcraft") => "bytes://bettercraft/study-icons/pdfcraft.png",
+        (IconSet::Study, "effectcraft") => "bytes://bettercraft/study-icons/effectcraft.png",
+        (IconSet::Study, "designcraft") => "bytes://bettercraft/study-icons/designcraft.png",
+        (IconSet::Study, "wordcraft") => "bytes://bettercraft/study-icons/wordcraft.png",
+        (IconSet::Study, "deckcraft") => "bytes://bettercraft/study-icons/deckcraft.png",
+        (IconSet::Study, "gridcraft") => "bytes://bettercraft/study-icons/gridcraft.png",
+        (IconSet::Study, "cadcraft") => "bytes://bettercraft/study-icons/cadcraft.png",
+        (IconSet::Study, "soundcraft") => "bytes://bettercraft/study-icons/soundcraft.png",
+        (IconSet::Study, "figcraft") => "bytes://bettercraft/study-icons/figcraft.png",
         _ => return None,
     };
-    Some(egui::ImageSource::Bytes { uri: uri.into(), bytes: egui::load::Bytes::Static(png256(style, id)?) })
+    Some(egui::ImageSource::Bytes { uri: uri.into(), bytes: egui::load::Bytes::Static(png256(set, id)?) })
 }
 
 /// The 256 px PNG.
-pub(crate) fn png256(style: IconStyle, id: &str) -> Option<&'static [u8]> {
-    Some(match (style, id) {
-        (IconStyle::Plain, "photocraft") => include_bytes!("../../../../assets/better-icons/photocraft.png"),
-        (IconStyle::Plain, "vectorcraft") => include_bytes!("../../../../assets/better-icons/vectorcraft.png"),
-        (IconStyle::Plain, "filmcraft") => include_bytes!("../../../../assets/better-icons/filmcraft.png"),
-        (IconStyle::Plain, "lightcraft") => include_bytes!("../../../../assets/better-icons/lightcraft.png"),
-        (IconStyle::Plain, "pdfcraft") => include_bytes!("../../../../assets/better-icons/pdfcraft.png"),
-        (IconStyle::Plain, "effectcraft") => include_bytes!("../../../../assets/better-icons/effectcraft.png"),
-        (IconStyle::Plain, "designcraft") => include_bytes!("../../../../assets/better-icons/designcraft.png"),
-        (IconStyle::Plain, "wordcraft") => include_bytes!("../../../../assets/better-icons/wordcraft.png"),
-        (IconStyle::Plain, "deckcraft") => include_bytes!("../../../../assets/better-icons/deckcraft.png"),
-        (IconStyle::Plain, "gridcraft") => include_bytes!("../../../../assets/better-icons/gridcraft.png"),
-        (IconStyle::Plain, "cadcraft") => include_bytes!("../../../../assets/better-icons/cadcraft.png"),
-        (IconStyle::Plain, "soundcraft") => include_bytes!("../../../../assets/better-icons/soundcraft.png"),
-        (IconStyle::Plain, "figcraft") => include_bytes!("../../../../assets/better-icons/figcraft.png"),
-        (IconStyle::Craft, "photocraft") => include_bytes!("../../../../assets/better-icons-craft/photocraft.png"),
-        (IconStyle::Craft, "vectorcraft") => include_bytes!("../../../../assets/better-icons-craft/vectorcraft.png"),
-        (IconStyle::Craft, "filmcraft") => include_bytes!("../../../../assets/better-icons-craft/filmcraft.png"),
-        (IconStyle::Craft, "lightcraft") => include_bytes!("../../../../assets/better-icons-craft/lightcraft.png"),
-        (IconStyle::Craft, "pdfcraft") => include_bytes!("../../../../assets/better-icons-craft/pdfcraft.png"),
-        (IconStyle::Craft, "effectcraft") => include_bytes!("../../../../assets/better-icons-craft/effectcraft.png"),
-        (IconStyle::Craft, "designcraft") => include_bytes!("../../../../assets/better-icons-craft/designcraft.png"),
-        (IconStyle::Craft, "wordcraft") => include_bytes!("../../../../assets/better-icons-craft/wordcraft.png"),
-        (IconStyle::Craft, "deckcraft") => include_bytes!("../../../../assets/better-icons-craft/deckcraft.png"),
-        (IconStyle::Craft, "gridcraft") => include_bytes!("../../../../assets/better-icons-craft/gridcraft.png"),
-        (IconStyle::Craft, "cadcraft") => include_bytes!("../../../../assets/better-icons-craft/cadcraft.png"),
-        (IconStyle::Craft, "soundcraft") => include_bytes!("../../../../assets/better-icons-craft/soundcraft.png"),
-        (IconStyle::Craft, "figcraft") => include_bytes!("../../../../assets/better-icons-craft/figcraft.png"),
+pub(crate) fn png256(set: IconSet, id: &str) -> Option<&'static [u8]> {
+    Some(match (set, id) {
+        (IconSet::Craft, "photocraft") => include_bytes!("../../../../assets/craft-icons/photocraft.png"),
+        (IconSet::Craft, "vectorcraft") => include_bytes!("../../../../assets/craft-icons/vectorcraft.png"),
+        (IconSet::Craft, "filmcraft") => include_bytes!("../../../../assets/craft-icons/filmcraft.png"),
+        (IconSet::Craft, "lightcraft") => include_bytes!("../../../../assets/craft-icons/lightcraft.png"),
+        (IconSet::Craft, "pdfcraft") => include_bytes!("../../../../assets/craft-icons/pdfcraft.png"),
+        (IconSet::Craft, "effectcraft") => include_bytes!("../../../../assets/craft-icons/effectcraft.png"),
+        (IconSet::Craft, "designcraft") => include_bytes!("../../../../assets/craft-icons/designcraft.png"),
+        (IconSet::Craft, "wordcraft") => include_bytes!("../../../../assets/craft-icons/wordcraft.png"),
+        (IconSet::Craft, "deckcraft") => include_bytes!("../../../../assets/craft-icons/deckcraft.png"),
+        (IconSet::Craft, "gridcraft") => include_bytes!("../../../../assets/craft-icons/gridcraft.png"),
+        (IconSet::Craft, "cadcraft") => include_bytes!("../../../../assets/craft-icons/cadcraft.png"),
+        (IconSet::Craft, "soundcraft") => include_bytes!("../../../../assets/craft-icons/soundcraft.png"),
+        (IconSet::Craft, "figcraft") => include_bytes!("../../../../assets/craft-icons/figcraft.png"),
+        (IconSet::Study, "photocraft") => include_bytes!("../../../../assets/study-icons/photocraft.png"),
+        (IconSet::Study, "vectorcraft") => include_bytes!("../../../../assets/study-icons/vectorcraft.png"),
+        (IconSet::Study, "filmcraft") => include_bytes!("../../../../assets/study-icons/filmcraft.png"),
+        (IconSet::Study, "lightcraft") => include_bytes!("../../../../assets/study-icons/lightcraft.png"),
+        (IconSet::Study, "pdfcraft") => include_bytes!("../../../../assets/study-icons/pdfcraft.png"),
+        (IconSet::Study, "effectcraft") => include_bytes!("../../../../assets/study-icons/effectcraft.png"),
+        (IconSet::Study, "designcraft") => include_bytes!("../../../../assets/study-icons/designcraft.png"),
+        (IconSet::Study, "wordcraft") => include_bytes!("../../../../assets/study-icons/wordcraft.png"),
+        (IconSet::Study, "deckcraft") => include_bytes!("../../../../assets/study-icons/deckcraft.png"),
+        (IconSet::Study, "gridcraft") => include_bytes!("../../../../assets/study-icons/gridcraft.png"),
+        (IconSet::Study, "cadcraft") => include_bytes!("../../../../assets/study-icons/cadcraft.png"),
+        (IconSet::Study, "soundcraft") => include_bytes!("../../../../assets/study-icons/soundcraft.png"),
+        (IconSet::Study, "figcraft") => include_bytes!("../../../../assets/study-icons/figcraft.png"),
         _ => return None,
     })
 }
 
 /// The `.icns` for the app bundle.
 #[cfg(target_os = "macos")]
-pub(crate) fn icns(style: IconStyle, id: &str) -> Option<&'static [u8]> {
-    Some(match (style, id) {
-        (IconStyle::Plain, "photocraft") => include_bytes!("../../../../assets/better-icons/icns/photocraft.icns"),
-        (IconStyle::Plain, "vectorcraft") => include_bytes!("../../../../assets/better-icons/icns/vectorcraft.icns"),
-        (IconStyle::Plain, "filmcraft") => include_bytes!("../../../../assets/better-icons/icns/filmcraft.icns"),
-        (IconStyle::Plain, "lightcraft") => include_bytes!("../../../../assets/better-icons/icns/lightcraft.icns"),
-        (IconStyle::Plain, "pdfcraft") => include_bytes!("../../../../assets/better-icons/icns/pdfcraft.icns"),
-        (IconStyle::Plain, "effectcraft") => include_bytes!("../../../../assets/better-icons/icns/effectcraft.icns"),
-        (IconStyle::Plain, "designcraft") => include_bytes!("../../../../assets/better-icons/icns/designcraft.icns"),
-        (IconStyle::Plain, "wordcraft") => include_bytes!("../../../../assets/better-icons/icns/wordcraft.icns"),
-        (IconStyle::Plain, "deckcraft") => include_bytes!("../../../../assets/better-icons/icns/deckcraft.icns"),
-        (IconStyle::Plain, "gridcraft") => include_bytes!("../../../../assets/better-icons/icns/gridcraft.icns"),
-        (IconStyle::Plain, "cadcraft") => include_bytes!("../../../../assets/better-icons/icns/cadcraft.icns"),
-        (IconStyle::Plain, "soundcraft") => include_bytes!("../../../../assets/better-icons/icns/soundcraft.icns"),
-        (IconStyle::Plain, "figcraft") => include_bytes!("../../../../assets/better-icons/icns/figcraft.icns"),
-        (IconStyle::Craft, "photocraft") => include_bytes!("../../../../assets/better-icons-craft/icns/photocraft.icns"),
-        (IconStyle::Craft, "vectorcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/vectorcraft.icns"),
-        (IconStyle::Craft, "filmcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/filmcraft.icns"),
-        (IconStyle::Craft, "lightcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/lightcraft.icns"),
-        (IconStyle::Craft, "pdfcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/pdfcraft.icns"),
-        (IconStyle::Craft, "effectcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/effectcraft.icns"),
-        (IconStyle::Craft, "designcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/designcraft.icns"),
-        (IconStyle::Craft, "wordcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/wordcraft.icns"),
-        (IconStyle::Craft, "deckcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/deckcraft.icns"),
-        (IconStyle::Craft, "gridcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/gridcraft.icns"),
-        (IconStyle::Craft, "cadcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/cadcraft.icns"),
-        (IconStyle::Craft, "soundcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/soundcraft.icns"),
-        (IconStyle::Craft, "figcraft") => include_bytes!("../../../../assets/better-icons-craft/icns/figcraft.icns"),
+pub(crate) fn icns(set: IconSet, id: &str) -> Option<&'static [u8]> {
+    Some(match (set, id) {
+        (IconSet::Craft, "photocraft") => include_bytes!("../../../../assets/craft-icons/icns/photocraft.icns"),
+        (IconSet::Craft, "vectorcraft") => include_bytes!("../../../../assets/craft-icons/icns/vectorcraft.icns"),
+        (IconSet::Craft, "filmcraft") => include_bytes!("../../../../assets/craft-icons/icns/filmcraft.icns"),
+        (IconSet::Craft, "lightcraft") => include_bytes!("../../../../assets/craft-icons/icns/lightcraft.icns"),
+        (IconSet::Craft, "pdfcraft") => include_bytes!("../../../../assets/craft-icons/icns/pdfcraft.icns"),
+        (IconSet::Craft, "effectcraft") => include_bytes!("../../../../assets/craft-icons/icns/effectcraft.icns"),
+        (IconSet::Craft, "designcraft") => include_bytes!("../../../../assets/craft-icons/icns/designcraft.icns"),
+        (IconSet::Craft, "wordcraft") => include_bytes!("../../../../assets/craft-icons/icns/wordcraft.icns"),
+        (IconSet::Craft, "deckcraft") => include_bytes!("../../../../assets/craft-icons/icns/deckcraft.icns"),
+        (IconSet::Craft, "gridcraft") => include_bytes!("../../../../assets/craft-icons/icns/gridcraft.icns"),
+        (IconSet::Craft, "cadcraft") => include_bytes!("../../../../assets/craft-icons/icns/cadcraft.icns"),
+        (IconSet::Craft, "soundcraft") => include_bytes!("../../../../assets/craft-icons/icns/soundcraft.icns"),
+        (IconSet::Craft, "figcraft") => include_bytes!("../../../../assets/craft-icons/icns/figcraft.icns"),
+        (IconSet::Study, "photocraft") => include_bytes!("../../../../assets/study-icons/icns/photocraft.icns"),
+        (IconSet::Study, "vectorcraft") => include_bytes!("../../../../assets/study-icons/icns/vectorcraft.icns"),
+        (IconSet::Study, "filmcraft") => include_bytes!("../../../../assets/study-icons/icns/filmcraft.icns"),
+        (IconSet::Study, "lightcraft") => include_bytes!("../../../../assets/study-icons/icns/lightcraft.icns"),
+        (IconSet::Study, "pdfcraft") => include_bytes!("../../../../assets/study-icons/icns/pdfcraft.icns"),
+        (IconSet::Study, "effectcraft") => include_bytes!("../../../../assets/study-icons/icns/effectcraft.icns"),
+        (IconSet::Study, "designcraft") => include_bytes!("../../../../assets/study-icons/icns/designcraft.icns"),
+        (IconSet::Study, "wordcraft") => include_bytes!("../../../../assets/study-icons/icns/wordcraft.icns"),
+        (IconSet::Study, "deckcraft") => include_bytes!("../../../../assets/study-icons/icns/deckcraft.icns"),
+        (IconSet::Study, "gridcraft") => include_bytes!("../../../../assets/study-icons/icns/gridcraft.icns"),
+        (IconSet::Study, "cadcraft") => include_bytes!("../../../../assets/study-icons/icns/cadcraft.icns"),
+        (IconSet::Study, "soundcraft") => include_bytes!("../../../../assets/study-icons/icns/soundcraft.icns"),
+        (IconSet::Study, "figcraft") => include_bytes!("../../../../assets/study-icons/icns/figcraft.icns"),
         _ => return None,
     })
 }
 
 /// A PNG no larger than eframe's default icon (12 052 bytes), for the Dock.
 #[cfg(target_os = "macos")]
-pub(crate) fn dock(style: IconStyle, id: &str) -> Option<&'static [u8]> {
-    Some(match (style, id) {
-        (IconStyle::Plain, "photocraft") => include_bytes!("../../../../assets/better-icons/dock/photocraft.png"),
-        (IconStyle::Plain, "vectorcraft") => include_bytes!("../../../../assets/better-icons/dock/vectorcraft.png"),
-        (IconStyle::Plain, "filmcraft") => include_bytes!("../../../../assets/better-icons/dock/filmcraft.png"),
-        (IconStyle::Plain, "lightcraft") => include_bytes!("../../../../assets/better-icons/dock/lightcraft.png"),
-        (IconStyle::Plain, "pdfcraft") => include_bytes!("../../../../assets/better-icons/dock/pdfcraft.png"),
-        (IconStyle::Plain, "effectcraft") => include_bytes!("../../../../assets/better-icons/dock/effectcraft.png"),
-        (IconStyle::Plain, "designcraft") => include_bytes!("../../../../assets/better-icons/dock/designcraft.png"),
-        (IconStyle::Plain, "wordcraft") => include_bytes!("../../../../assets/better-icons/dock/wordcraft.png"),
-        (IconStyle::Plain, "deckcraft") => include_bytes!("../../../../assets/better-icons/dock/deckcraft.png"),
-        (IconStyle::Plain, "gridcraft") => include_bytes!("../../../../assets/better-icons/dock/gridcraft.png"),
-        (IconStyle::Plain, "cadcraft") => include_bytes!("../../../../assets/better-icons/dock/cadcraft.png"),
-        (IconStyle::Plain, "soundcraft") => include_bytes!("../../../../assets/better-icons/dock/soundcraft.png"),
-        (IconStyle::Plain, "figcraft") => include_bytes!("../../../../assets/better-icons/dock/figcraft.png"),
-        (IconStyle::Craft, "photocraft") => include_bytes!("../../../../assets/better-icons-craft/dock/photocraft.png"),
-        (IconStyle::Craft, "vectorcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/vectorcraft.png"),
-        (IconStyle::Craft, "filmcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/filmcraft.png"),
-        (IconStyle::Craft, "lightcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/lightcraft.png"),
-        (IconStyle::Craft, "pdfcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/pdfcraft.png"),
-        (IconStyle::Craft, "effectcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/effectcraft.png"),
-        (IconStyle::Craft, "designcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/designcraft.png"),
-        (IconStyle::Craft, "wordcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/wordcraft.png"),
-        (IconStyle::Craft, "deckcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/deckcraft.png"),
-        (IconStyle::Craft, "gridcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/gridcraft.png"),
-        (IconStyle::Craft, "cadcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/cadcraft.png"),
-        (IconStyle::Craft, "soundcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/soundcraft.png"),
-        (IconStyle::Craft, "figcraft") => include_bytes!("../../../../assets/better-icons-craft/dock/figcraft.png"),
+pub(crate) fn dock(set: IconSet, id: &str) -> Option<&'static [u8]> {
+    Some(match (set, id) {
+        (IconSet::Craft, "photocraft") => include_bytes!("../../../../assets/craft-icons/dock/photocraft.png"),
+        (IconSet::Craft, "vectorcraft") => include_bytes!("../../../../assets/craft-icons/dock/vectorcraft.png"),
+        (IconSet::Craft, "filmcraft") => include_bytes!("../../../../assets/craft-icons/dock/filmcraft.png"),
+        (IconSet::Craft, "lightcraft") => include_bytes!("../../../../assets/craft-icons/dock/lightcraft.png"),
+        (IconSet::Craft, "pdfcraft") => include_bytes!("../../../../assets/craft-icons/dock/pdfcraft.png"),
+        (IconSet::Craft, "effectcraft") => include_bytes!("../../../../assets/craft-icons/dock/effectcraft.png"),
+        (IconSet::Craft, "designcraft") => include_bytes!("../../../../assets/craft-icons/dock/designcraft.png"),
+        (IconSet::Craft, "wordcraft") => include_bytes!("../../../../assets/craft-icons/dock/wordcraft.png"),
+        (IconSet::Craft, "deckcraft") => include_bytes!("../../../../assets/craft-icons/dock/deckcraft.png"),
+        (IconSet::Craft, "gridcraft") => include_bytes!("../../../../assets/craft-icons/dock/gridcraft.png"),
+        (IconSet::Craft, "cadcraft") => include_bytes!("../../../../assets/craft-icons/dock/cadcraft.png"),
+        (IconSet::Craft, "soundcraft") => include_bytes!("../../../../assets/craft-icons/dock/soundcraft.png"),
+        (IconSet::Craft, "figcraft") => include_bytes!("../../../../assets/craft-icons/dock/figcraft.png"),
+        (IconSet::Study, "photocraft") => include_bytes!("../../../../assets/study-icons/dock/photocraft.png"),
+        (IconSet::Study, "vectorcraft") => include_bytes!("../../../../assets/study-icons/dock/vectorcraft.png"),
+        (IconSet::Study, "filmcraft") => include_bytes!("../../../../assets/study-icons/dock/filmcraft.png"),
+        (IconSet::Study, "lightcraft") => include_bytes!("../../../../assets/study-icons/dock/lightcraft.png"),
+        (IconSet::Study, "pdfcraft") => include_bytes!("../../../../assets/study-icons/dock/pdfcraft.png"),
+        (IconSet::Study, "effectcraft") => include_bytes!("../../../../assets/study-icons/dock/effectcraft.png"),
+        (IconSet::Study, "designcraft") => include_bytes!("../../../../assets/study-icons/dock/designcraft.png"),
+        (IconSet::Study, "wordcraft") => include_bytes!("../../../../assets/study-icons/dock/wordcraft.png"),
+        (IconSet::Study, "deckcraft") => include_bytes!("../../../../assets/study-icons/dock/deckcraft.png"),
+        (IconSet::Study, "gridcraft") => include_bytes!("../../../../assets/study-icons/dock/gridcraft.png"),
+        (IconSet::Study, "cadcraft") => include_bytes!("../../../../assets/study-icons/dock/cadcraft.png"),
+        (IconSet::Study, "soundcraft") => include_bytes!("../../../../assets/study-icons/dock/soundcraft.png"),
+        (IconSet::Study, "figcraft") => include_bytes!("../../../../assets/study-icons/dock/figcraft.png"),
         _ => return None,
     })
 }
 
 /// The 96 px PNG.
 #[cfg(target_os = "macos")]
-pub(crate) fn png96(style: IconStyle, id: &str) -> Option<&'static [u8]> {
-    Some(match (style, id) {
-        (IconStyle::Plain, "photocraft") => include_bytes!("../../../../assets/better-icons/small/photocraft-96.png"),
-        (IconStyle::Plain, "vectorcraft") => include_bytes!("../../../../assets/better-icons/small/vectorcraft-96.png"),
-        (IconStyle::Plain, "filmcraft") => include_bytes!("../../../../assets/better-icons/small/filmcraft-96.png"),
-        (IconStyle::Plain, "lightcraft") => include_bytes!("../../../../assets/better-icons/small/lightcraft-96.png"),
-        (IconStyle::Plain, "pdfcraft") => include_bytes!("../../../../assets/better-icons/small/pdfcraft-96.png"),
-        (IconStyle::Plain, "effectcraft") => include_bytes!("../../../../assets/better-icons/small/effectcraft-96.png"),
-        (IconStyle::Plain, "designcraft") => include_bytes!("../../../../assets/better-icons/small/designcraft-96.png"),
-        (IconStyle::Plain, "wordcraft") => include_bytes!("../../../../assets/better-icons/small/wordcraft-96.png"),
-        (IconStyle::Plain, "deckcraft") => include_bytes!("../../../../assets/better-icons/small/deckcraft-96.png"),
-        (IconStyle::Plain, "gridcraft") => include_bytes!("../../../../assets/better-icons/small/gridcraft-96.png"),
-        (IconStyle::Plain, "cadcraft") => include_bytes!("../../../../assets/better-icons/small/cadcraft-96.png"),
-        (IconStyle::Plain, "soundcraft") => include_bytes!("../../../../assets/better-icons/small/soundcraft-96.png"),
-        (IconStyle::Plain, "figcraft") => include_bytes!("../../../../assets/better-icons/small/figcraft-96.png"),
-        (IconStyle::Craft, "photocraft") => include_bytes!("../../../../assets/better-icons-craft/small/photocraft-96.png"),
-        (IconStyle::Craft, "vectorcraft") => include_bytes!("../../../../assets/better-icons-craft/small/vectorcraft-96.png"),
-        (IconStyle::Craft, "filmcraft") => include_bytes!("../../../../assets/better-icons-craft/small/filmcraft-96.png"),
-        (IconStyle::Craft, "lightcraft") => include_bytes!("../../../../assets/better-icons-craft/small/lightcraft-96.png"),
-        (IconStyle::Craft, "pdfcraft") => include_bytes!("../../../../assets/better-icons-craft/small/pdfcraft-96.png"),
-        (IconStyle::Craft, "effectcraft") => include_bytes!("../../../../assets/better-icons-craft/small/effectcraft-96.png"),
-        (IconStyle::Craft, "designcraft") => include_bytes!("../../../../assets/better-icons-craft/small/designcraft-96.png"),
-        (IconStyle::Craft, "wordcraft") => include_bytes!("../../../../assets/better-icons-craft/small/wordcraft-96.png"),
-        (IconStyle::Craft, "deckcraft") => include_bytes!("../../../../assets/better-icons-craft/small/deckcraft-96.png"),
-        (IconStyle::Craft, "gridcraft") => include_bytes!("../../../../assets/better-icons-craft/small/gridcraft-96.png"),
-        (IconStyle::Craft, "cadcraft") => include_bytes!("../../../../assets/better-icons-craft/small/cadcraft-96.png"),
-        (IconStyle::Craft, "soundcraft") => include_bytes!("../../../../assets/better-icons-craft/small/soundcraft-96.png"),
-        (IconStyle::Craft, "figcraft") => include_bytes!("../../../../assets/better-icons-craft/small/figcraft-96.png"),
+pub(crate) fn png96(set: IconSet, id: &str) -> Option<&'static [u8]> {
+    Some(match (set, id) {
+        (IconSet::Craft, "photocraft") => include_bytes!("../../../../assets/craft-icons/small/photocraft-96.png"),
+        (IconSet::Craft, "vectorcraft") => include_bytes!("../../../../assets/craft-icons/small/vectorcraft-96.png"),
+        (IconSet::Craft, "filmcraft") => include_bytes!("../../../../assets/craft-icons/small/filmcraft-96.png"),
+        (IconSet::Craft, "lightcraft") => include_bytes!("../../../../assets/craft-icons/small/lightcraft-96.png"),
+        (IconSet::Craft, "pdfcraft") => include_bytes!("../../../../assets/craft-icons/small/pdfcraft-96.png"),
+        (IconSet::Craft, "effectcraft") => include_bytes!("../../../../assets/craft-icons/small/effectcraft-96.png"),
+        (IconSet::Craft, "designcraft") => include_bytes!("../../../../assets/craft-icons/small/designcraft-96.png"),
+        (IconSet::Craft, "wordcraft") => include_bytes!("../../../../assets/craft-icons/small/wordcraft-96.png"),
+        (IconSet::Craft, "deckcraft") => include_bytes!("../../../../assets/craft-icons/small/deckcraft-96.png"),
+        (IconSet::Craft, "gridcraft") => include_bytes!("../../../../assets/craft-icons/small/gridcraft-96.png"),
+        (IconSet::Craft, "cadcraft") => include_bytes!("../../../../assets/craft-icons/small/cadcraft-96.png"),
+        (IconSet::Craft, "soundcraft") => include_bytes!("../../../../assets/craft-icons/small/soundcraft-96.png"),
+        (IconSet::Craft, "figcraft") => include_bytes!("../../../../assets/craft-icons/small/figcraft-96.png"),
+        (IconSet::Study, "photocraft") => include_bytes!("../../../../assets/study-icons/small/photocraft-96.png"),
+        (IconSet::Study, "vectorcraft") => include_bytes!("../../../../assets/study-icons/small/vectorcraft-96.png"),
+        (IconSet::Study, "filmcraft") => include_bytes!("../../../../assets/study-icons/small/filmcraft-96.png"),
+        (IconSet::Study, "lightcraft") => include_bytes!("../../../../assets/study-icons/small/lightcraft-96.png"),
+        (IconSet::Study, "pdfcraft") => include_bytes!("../../../../assets/study-icons/small/pdfcraft-96.png"),
+        (IconSet::Study, "effectcraft") => include_bytes!("../../../../assets/study-icons/small/effectcraft-96.png"),
+        (IconSet::Study, "designcraft") => include_bytes!("../../../../assets/study-icons/small/designcraft-96.png"),
+        (IconSet::Study, "wordcraft") => include_bytes!("../../../../assets/study-icons/small/wordcraft-96.png"),
+        (IconSet::Study, "deckcraft") => include_bytes!("../../../../assets/study-icons/small/deckcraft-96.png"),
+        (IconSet::Study, "gridcraft") => include_bytes!("../../../../assets/study-icons/small/gridcraft-96.png"),
+        (IconSet::Study, "cadcraft") => include_bytes!("../../../../assets/study-icons/small/cadcraft-96.png"),
+        (IconSet::Study, "soundcraft") => include_bytes!("../../../../assets/study-icons/small/soundcraft-96.png"),
+        (IconSet::Study, "figcraft") => include_bytes!("../../../../assets/study-icons/small/figcraft-96.png"),
         _ => return None,
     })
 }
 
 /// The 64 px PNG, the last resort for small embedded icons.
 #[cfg(target_os = "macos")]
-pub(crate) fn png64(style: IconStyle, id: &str) -> Option<&'static [u8]> {
-    Some(match (style, id) {
-        (IconStyle::Plain, "photocraft") => include_bytes!("../../../../assets/better-icons/small/photocraft-64.png"),
-        (IconStyle::Plain, "vectorcraft") => include_bytes!("../../../../assets/better-icons/small/vectorcraft-64.png"),
-        (IconStyle::Plain, "filmcraft") => include_bytes!("../../../../assets/better-icons/small/filmcraft-64.png"),
-        (IconStyle::Plain, "lightcraft") => include_bytes!("../../../../assets/better-icons/small/lightcraft-64.png"),
-        (IconStyle::Plain, "pdfcraft") => include_bytes!("../../../../assets/better-icons/small/pdfcraft-64.png"),
-        (IconStyle::Plain, "effectcraft") => include_bytes!("../../../../assets/better-icons/small/effectcraft-64.png"),
-        (IconStyle::Plain, "designcraft") => include_bytes!("../../../../assets/better-icons/small/designcraft-64.png"),
-        (IconStyle::Plain, "wordcraft") => include_bytes!("../../../../assets/better-icons/small/wordcraft-64.png"),
-        (IconStyle::Plain, "deckcraft") => include_bytes!("../../../../assets/better-icons/small/deckcraft-64.png"),
-        (IconStyle::Plain, "gridcraft") => include_bytes!("../../../../assets/better-icons/small/gridcraft-64.png"),
-        (IconStyle::Plain, "cadcraft") => include_bytes!("../../../../assets/better-icons/small/cadcraft-64.png"),
-        (IconStyle::Plain, "soundcraft") => include_bytes!("../../../../assets/better-icons/small/soundcraft-64.png"),
-        (IconStyle::Plain, "figcraft") => include_bytes!("../../../../assets/better-icons/small/figcraft-64.png"),
-        (IconStyle::Craft, "photocraft") => include_bytes!("../../../../assets/better-icons-craft/small/photocraft-64.png"),
-        (IconStyle::Craft, "vectorcraft") => include_bytes!("../../../../assets/better-icons-craft/small/vectorcraft-64.png"),
-        (IconStyle::Craft, "filmcraft") => include_bytes!("../../../../assets/better-icons-craft/small/filmcraft-64.png"),
-        (IconStyle::Craft, "lightcraft") => include_bytes!("../../../../assets/better-icons-craft/small/lightcraft-64.png"),
-        (IconStyle::Craft, "pdfcraft") => include_bytes!("../../../../assets/better-icons-craft/small/pdfcraft-64.png"),
-        (IconStyle::Craft, "effectcraft") => include_bytes!("../../../../assets/better-icons-craft/small/effectcraft-64.png"),
-        (IconStyle::Craft, "designcraft") => include_bytes!("../../../../assets/better-icons-craft/small/designcraft-64.png"),
-        (IconStyle::Craft, "wordcraft") => include_bytes!("../../../../assets/better-icons-craft/small/wordcraft-64.png"),
-        (IconStyle::Craft, "deckcraft") => include_bytes!("../../../../assets/better-icons-craft/small/deckcraft-64.png"),
-        (IconStyle::Craft, "gridcraft") => include_bytes!("../../../../assets/better-icons-craft/small/gridcraft-64.png"),
-        (IconStyle::Craft, "cadcraft") => include_bytes!("../../../../assets/better-icons-craft/small/cadcraft-64.png"),
-        (IconStyle::Craft, "soundcraft") => include_bytes!("../../../../assets/better-icons-craft/small/soundcraft-64.png"),
-        (IconStyle::Craft, "figcraft") => include_bytes!("../../../../assets/better-icons-craft/small/figcraft-64.png"),
+pub(crate) fn png64(set: IconSet, id: &str) -> Option<&'static [u8]> {
+    Some(match (set, id) {
+        (IconSet::Craft, "photocraft") => include_bytes!("../../../../assets/craft-icons/small/photocraft-64.png"),
+        (IconSet::Craft, "vectorcraft") => include_bytes!("../../../../assets/craft-icons/small/vectorcraft-64.png"),
+        (IconSet::Craft, "filmcraft") => include_bytes!("../../../../assets/craft-icons/small/filmcraft-64.png"),
+        (IconSet::Craft, "lightcraft") => include_bytes!("../../../../assets/craft-icons/small/lightcraft-64.png"),
+        (IconSet::Craft, "pdfcraft") => include_bytes!("../../../../assets/craft-icons/small/pdfcraft-64.png"),
+        (IconSet::Craft, "effectcraft") => include_bytes!("../../../../assets/craft-icons/small/effectcraft-64.png"),
+        (IconSet::Craft, "designcraft") => include_bytes!("../../../../assets/craft-icons/small/designcraft-64.png"),
+        (IconSet::Craft, "wordcraft") => include_bytes!("../../../../assets/craft-icons/small/wordcraft-64.png"),
+        (IconSet::Craft, "deckcraft") => include_bytes!("../../../../assets/craft-icons/small/deckcraft-64.png"),
+        (IconSet::Craft, "gridcraft") => include_bytes!("../../../../assets/craft-icons/small/gridcraft-64.png"),
+        (IconSet::Craft, "cadcraft") => include_bytes!("../../../../assets/craft-icons/small/cadcraft-64.png"),
+        (IconSet::Craft, "soundcraft") => include_bytes!("../../../../assets/craft-icons/small/soundcraft-64.png"),
+        (IconSet::Craft, "figcraft") => include_bytes!("../../../../assets/craft-icons/small/figcraft-64.png"),
+        (IconSet::Study, "photocraft") => include_bytes!("../../../../assets/study-icons/small/photocraft-64.png"),
+        (IconSet::Study, "vectorcraft") => include_bytes!("../../../../assets/study-icons/small/vectorcraft-64.png"),
+        (IconSet::Study, "filmcraft") => include_bytes!("../../../../assets/study-icons/small/filmcraft-64.png"),
+        (IconSet::Study, "lightcraft") => include_bytes!("../../../../assets/study-icons/small/lightcraft-64.png"),
+        (IconSet::Study, "pdfcraft") => include_bytes!("../../../../assets/study-icons/small/pdfcraft-64.png"),
+        (IconSet::Study, "effectcraft") => include_bytes!("../../../../assets/study-icons/small/effectcraft-64.png"),
+        (IconSet::Study, "designcraft") => include_bytes!("../../../../assets/study-icons/small/designcraft-64.png"),
+        (IconSet::Study, "wordcraft") => include_bytes!("../../../../assets/study-icons/small/wordcraft-64.png"),
+        (IconSet::Study, "deckcraft") => include_bytes!("../../../../assets/study-icons/small/deckcraft-64.png"),
+        (IconSet::Study, "gridcraft") => include_bytes!("../../../../assets/study-icons/small/gridcraft-64.png"),
+        (IconSet::Study, "cadcraft") => include_bytes!("../../../../assets/study-icons/small/cadcraft-64.png"),
+        (IconSet::Study, "soundcraft") => include_bytes!("../../../../assets/study-icons/small/soundcraft-64.png"),
+        (IconSet::Study, "figcraft") => include_bytes!("../../../../assets/study-icons/small/figcraft-64.png"),
         _ => return None,
     })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{IconStyle, image, png256};
+    use super::{IconSet, image, png256};
 
     #[test]
-    fn every_app_has_both_styles() {
-        for style in IconStyle::ALL {
+    fn every_app_has_both_sets() {
+        for set in IconSet::ALL {
             for id in [
                 "photocraft",
                 "vectorcraft",
@@ -254,9 +273,10 @@ mod tests {
                 "soundcraft",
                 "figcraft",
             ] {
-                assert!(png256(style, id).is_some() && image(style, id).is_some(), "{style:?} {id}");
+                assert!(png256(set, id).is_some() && image(set, id).is_some(), "{set:?} {id}");
             }
-            assert_eq!(IconStyle::from_key(style.key()), Some(style));
+            assert_eq!(IconSet::from_key(set.key()), Some(set));
         }
+        assert_eq!(IconSet::from_key("craft"), Some(IconSet::Study));
     }
 }
