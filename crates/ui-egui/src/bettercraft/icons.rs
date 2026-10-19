@@ -1,12 +1,7 @@
-//! The original programs' icons for the Craft Apps, shown in the launcher while
-//! [`super::ORIGINAL_ICONS`] is on.
+//! The original programs' icons for the Craft Apps: drawn beside each Craft icon in the compact
+//! rows, and put on the installed apps by `machine_icons` while [`super::ORIGINAL_ICONS`] is on.
 
 use egui::ImageSource;
-
-/// Whether the original icons are shown instead of the Craft ones.
-pub fn enabled() -> bool {
-    super::ORIGINAL_ICONS.get()
-}
 
 /// The original program's icon for a Craft App id.
 pub fn app(id: &str) -> Option<ImageSource<'static>> {

@@ -4,12 +4,13 @@ A fork of [storytold/craft-launcher](https://github.com/storytold/craft-launcher
 with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours; or run
 `scripts/sync-upstream.sh`). It adds two toolbar buttons:
 
-- **Compact** (on by default): one slim row per app (icon, name, one status line, the main button)
-  instead of the tall cards.
-- **Original Icons**: swaps each Craft App's icon for the original program's, in the launcher and,
-  on macOS, on the installed `.app` bundles (Finder, Launchpad, Dock). An app update replaces the
-  bundle and drops the custom icon, so the launcher puts it back within seconds. Turning the button
-  off restores the Craft icons.
+- **Compact** (on by default): one slim row per app with its icon pair (the Craft icon small and
+  behind, the original program's icon it gets on the Mac larger and in front), name, one status
+  line and the main button, instead of the tall cards.
+- **Swap Mac Icons**: gives the installed `.app` bundles the original programs' icons in Finder,
+  Launchpad and the Dock (macOS). An app update replaces the bundle and drops the custom icon, so
+  the launcher puts it back within seconds while it runs. Turning the button off restores the Craft
+  icons. Inside the launcher the Craft icons stay as they are.
 
 The icons used:
 
@@ -30,8 +31,8 @@ The icons used:
 | CADCraft | AutoCAD |
 
 Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/better-icons/`, this file, the sync
-workflow and script. Upstream files touched: one-line hooks in `lib.rs`, `views.rs` (toolbar and
-`grid_block`) and `icons.rs`, plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
+workflow and script. Upstream files touched: one-line hooks in `lib.rs` and `views.rs` (toolbar and
+`grid_block`), plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
 upstream's UI tests keep checking upstream's cards. The original icons are trademarks of their owners and are used here for personal use.
 
 ## Launcher icon and installing on macOS

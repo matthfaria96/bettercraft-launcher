@@ -4,11 +4,6 @@ use egui::ImageSource;
 
 /// The 128 px icon of a Craft App.
 pub fn app(id: &str) -> Option<ImageSource<'static>> {
-    if crate::bettercraft::icons::enabled()
-        && let Some(original) = crate::bettercraft::icons::app(id)
-    {
-        return Some(original);
-    }
     Some(match id {
         "photocraft" => egui::include_image!("../../../assets/app-icons/photocraft.png"),
         "vectorcraft" => egui::include_image!("../../../assets/app-icons/vectorcraft.png"),
@@ -39,7 +34,7 @@ pub fn app_image(ctx: &egui::Context, id: &str, in_colour: bool) -> Option<egui:
     if let Some(colour) = &colour {
         let _ = colour.load_for_size(ctx, egui::Vec2::splat(64.0));
     }
-    let key = egui::Id::new(("grey-app-icon", id, crate::bettercraft::icons::enabled()));
+    let key = egui::Id::new(("grey-app-icon", id));
     if let Some(texture) = ctx.data(|d| d.get_temp::<egui::TextureHandle>(key)) {
         return Some(egui::Image::new(&texture));
     }
@@ -48,11 +43,8 @@ pub fn app_image(ctx: &egui::Context, id: &str, in_colour: bool) -> Option<egui:
     let size = [picture.width() as usize, picture.height() as usize];
     let mut pixels = picture.into_raw();
     desaturate(&mut pixels);
-    let texture = ctx.load_texture(
-        format!("grey-app-icon-{id}-{}", crate::bettercraft::icons::enabled()),
-        egui::ColorImage::from_rgba_unmultiplied(size, &pixels),
-        egui::TextureOptions::LINEAR,
-    );
+    let texture =
+        ctx.load_texture(format!("grey-app-icon-{id}"), egui::ColorImage::from_rgba_unmultiplied(size, &pixels), egui::TextureOptions::LINEAR);
     ctx.data_mut(|d| d.insert_temp(key, texture.clone()));
     Some(egui::Image::new(&texture))
 }

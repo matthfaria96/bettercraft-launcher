@@ -1,6 +1,6 @@
 //! BetterCraft: everything this fork adds to the upstream `storytold/craft-launcher`.
 //!
-//! - `icons`: the original programs' icons in place of the Craft ones, inside the launcher.
+//! - `icons`: the original programs' icons, shown beside each Craft icon in the compact rows.
 //! - `machine_icons`: the same icons on the installed `.app` bundles (macOS Finder, Dock, Launchpad).
 //! - `compact`: a denser, quieter grid of apps.
 //!
@@ -69,7 +69,8 @@ pub(crate) static COMPACT: Flag = Flag::new("bettercraft-compact", !cfg!(feature
 pub(crate) fn toolbar(launcher: &LauncherUi, ui: &mut Ui) {
     ORIGINAL_ICONS.load_once(ui.ctx());
     COMPACT.load_once(ui.ctx());
-    let icons_clicked = ORIGINAL_ICONS.button(ui, "Original Icons", "Use the original programs' icons, here and on the installed apps");
+    let icons_clicked =
+        ORIGINAL_ICONS.button(ui, "Swap Mac Icons", "Give the installed apps the original programs' icons in Finder, Launchpad and the Dock");
     COMPACT.button(ui, "Compact", "A denser list with less detail");
     machine_icons::sync(launcher, icons_clicked);
 }

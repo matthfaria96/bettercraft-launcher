@@ -18,6 +18,10 @@ const ROW_MIN_W: f32 = 460.0;
 const ROW_H: f32 = 80.0;
 const PAD: f32 = 20.0;
 const ICON: f32 = 44.0;
+/// The Craft App's own icon, smaller, behind the original program's.
+const CRAFT_ICON: f32 = 34.0;
+/// How far the original program's icon sits right of the Craft icon's left edge.
+const PAIR_SHIFT: f32 = 24.0;
 /// Space between the name line and the status line.
 const LINE_GAP: f32 = 6.0;
 const ACTIONS_W: f32 = 212.0;
@@ -63,10 +67,7 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
     ui.painter().rect(rect, CornerRadius::ZERO, fill, t.hairline(), egui::StrokeKind::Inside);
 
     let inner = rect.shrink2(vec2(PAD, 0.0));
-    let icon_rect = Rect::from_center_size(egui::pos2(inner.left() + ICON / 2.0, inner.center().y), vec2(ICON, ICON));
-    if let Some(icon) = crate::icons::app_image(ui.ctx(), app.id, installed || hovered) {
-        icon.paint_at(ui, icon_rect);
-    }
+    let icon_rect = icon_pair(ui, app.id, egui::pos2(inner.left(), inner.center().y), installed || hovered, fill);
 
     let gap = ui.spacing().item_spacing.x;
     let actions_w = ACTIONS_W + gap + theme::CONTROL_H;
@@ -96,6 +97,25 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
         egui::UiBuilder::new().max_rect(actions).layout(egui::Layout::left_to_right(egui::Align::Center).with_main_align(egui::Align::Max)),
     );
     launcher.actions(&mut actions_ui, &entry, &status, actions_w);
+}
+
+/// The Craft icon, small and behind, and the original program's icon it gets on this Mac, larger
+/// and in front. Returns the space the pair takes; `left_mid` is its left edge, vertically centred.
+fn icon_pair(ui: &Ui, id: &str, left_mid: egui::Pos2, in_colour: bool, row_fill: egui::Color32) -> Rect {
+    let craft = Rect::from_center_size(egui::pos2(left_mid.x + CRAFT_ICON / 2.0, left_mid.y), vec2(CRAFT_ICON, CRAFT_ICON));
+    let original = Rect::from_center_size(egui::pos2(left_mid.x + PAIR_SHIFT + ICON / 2.0, left_mid.y), vec2(ICON, ICON));
+    if let Some(icon) = crate::icons::app_image(ui.ctx(), id, in_colour) {
+        icon.paint_at(ui, craft);
+    }
+    if let Some(source) = super::icons::app(id) {
+        // A ring in the row's colour cut around the front icon (its art fills ~80 % of the
+        // square, the rest is the macOS margin), so the two read as separate tiles.
+        let tile = original.shrink(ICON * 0.09);
+        ui.painter().rect_filled(tile.expand(2.5), CornerRadius::same(11), row_fill);
+        let fade = if in_colour { egui::Color32::WHITE } else { egui::Color32::from_white_alpha(120) };
+        egui::Image::new(source).tint(fade).paint_at(ui, original);
+    }
+    craft.union(original)
 }
 
 /// One quiet line: the version when all is well, the status (in its tone) when something is up.
