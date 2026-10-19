@@ -103,19 +103,11 @@ fn say(en: &'static str, pt: &'static str) -> &'static str {
     if crate::i18n::current().code().starts_with("pt") { pt } else { en }
 }
 
-/// The fork's toolbar buttons, drawn after upstream's refresh button. Also keeps the installed
+/// The fork's toolbar switch, drawn after upstream's refresh button. Also keeps the installed
 /// apps' icons in step with the choice.
 pub(crate) fn toolbar(launcher: &LauncherUi, ui: &mut Ui) {
     ORIGINAL_ICONS.load_once(ui.ctx());
-    COMPACT.load_once(ui.ctx());
     let toggled = mac_icons_switch(ui);
-    let compact = COMPACT.get();
-    if widgets::button(ui, say("Compact", "Compacto"), if compact { Kind::Primary } else { Kind::Secondary }, 0.0)
-        .on_hover_text(say("A denser list with less detail", "Uma lista mais enxuta, com menos detalhes"))
-        .clicked()
-    {
-        COMPACT.set(ui.ctx(), !compact);
-    }
     machine_icons::sync(launcher, toggled);
     if machine_icons::status().busy {
         ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));

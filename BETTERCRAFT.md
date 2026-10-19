@@ -4,7 +4,7 @@ A fork of [storytold/craft-launcher](https://github.com/storytold/craft-launcher
 with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours; or run
 `scripts/sync-upstream.sh`). It adds two toolbar buttons:
 
-- **Compact** (on by default): one slim row per app with its icon pair (the Craft icon small and
+- **Compact rows** (always on, no button): one slim row per app with its icon pair (the Craft icon small and
   behind, the original program's icon it gets on the Mac larger and in front), name, one status
   line and the main button, instead of the tall cards.
 - **Mac icons ● ON/OFF**: the switch shows its state (and `…` while it works; the tooltip counts the apps done). On, it gives the installed `.app` bundles the original programs' icons in Finder,
