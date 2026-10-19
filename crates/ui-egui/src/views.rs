@@ -168,7 +168,9 @@ impl LauncherUi {
                 });
             ui.add_space(14.0);
         }
-        self.announcements(ui);
+        if !crate::bettercraft::fork() {
+            self.announcements(ui);
+        }
         let updates = self.count(Filter::Updates);
         let mut compact = false;
         ui.horizontal(|ui| {
@@ -189,10 +191,14 @@ impl LauncherUi {
             compact = ui.available_width() < theme::TOOLBAR_COMPACT_BELOW;
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 // Right to left: the view switch at the far right, then the search.
-                crate::bar::view_toggle(ui, &mut self.settings.view, [tl!("Show apps as cards"), tl!("Show apps as a table")]);
+                if crate::bettercraft::fork() {
+                    self.settings.view = ViewMode::Grid;
+                } else {
+                    crate::bar::view_toggle(ui, &mut self.settings.view, [tl!("Show apps as cards"), tl!("Show apps as a table")]);
+                }
                 ui.add_space(4.0);
                 // BetterCraft: no search or sort in the cleaner compact layout.
-                let full = !crate::bettercraft::compact();
+                let full = !crate::bettercraft::fork();
                 if full {
                     ui.add(
                         egui::TextEdit::singleline(&mut self.search)
@@ -219,7 +225,7 @@ impl LauncherUi {
         if compact {
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                if self.settings.view == ViewMode::Grid && !crate::bettercraft::compact() {
+                if self.settings.view == ViewMode::Grid && !crate::bettercraft::fork() {
                     // "Sort" before the picker, as in the full-width row.
                     widgets::hud(ui, tl!("Sort"), t.faint);
                     self.sort_picker(ui);
@@ -337,6 +343,9 @@ impl LauncherUi {
             tip: fmt(tl!("ArtCraft on {name}"), &[("name", name)]),
             url,
         }));
+        if crate::bettercraft::fork() {
+            links.clear();
+        }
         let icon = 13.0;
         let spacing = ui.spacing().item_spacing.x;
         // The icons on the right keep their size; the status on the left gets what is left and
@@ -872,7 +881,7 @@ impl LauncherUi {
         let manage = self.caps.manage_apps;
         let reveal = self.caps.reveal_label;
         widgets::more_menu(ui, |ui| {
-            if entry.release().is_some() && ui.button(tl!("Release notes")).clicked() {
+            if !crate::bettercraft::fork() && entry.release().is_some() && ui.button(tl!("Release notes")).clicked() {
                 self.dialog = Some(Dialog::Notes(id.clone()));
                 ui.close();
             }

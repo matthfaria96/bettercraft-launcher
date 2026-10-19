@@ -2,17 +2,16 @@
 //! of upstream's tall cards with their version strip, GitHub link, description and date.
 //!
 //! Hooked from the top of upstream's `grid_block`; returns false (draw upstream's cards) while
-//! [`super::compact`] is off.
+//! [`super::fork`] is off.
 
 use artcraft_launcher_core::status::AppStatus;
 use egui::{CornerRadius, FontId, Rect, RichText, Sense, Ui, vec2};
 
 use crate::LauncherUi;
-use crate::i18n::{current, fmt, tr_ctx};
+use crate::i18n::{current, tr_ctx};
 use crate::model::{self, AppEntry};
 use crate::theme::{self, Tokens, rgb};
 use crate::widgets;
-use artcraft_launcher_core::details::AppDetails;
 
 const ROW_MIN_W: f32 = 460.0;
 const ROW_H: f32 = 80.0;
@@ -28,7 +27,7 @@ const ACTIONS_W: f32 = 212.0;
 
 /// Draws `ids` as compact rows when compact mode is on; false means upstream should draw them.
 pub(crate) fn grid_block(launcher: &mut LauncherUi, ui: &mut Ui, ids: &[&'static str]) -> bool {
-    if !super::compact() {
+    if !super::fork() {
         return false;
     }
     if ids.is_empty() {
@@ -56,13 +55,6 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
     let installed = status.is_installed();
     let hovered = ui.rect_contains_pointer(rect);
 
-    if AppDetails::by_id(id).is_some() {
-        let open = ui.interact(rect, ui.id().with(("compact-open", id)), Sense::click());
-        open.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, fmt(tl!("{name} details"), &[("name", app.name)])));
-        if open.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-            launcher.detail = Some(id.to_string());
-        }
-    }
     let fill = if hovered { t.bg.lerp_to_gamma(rgb(app.color), 0.04) } else { t.bg };
     ui.painter().rect(rect, CornerRadius::ZERO, fill, t.hairline(), egui::StrokeKind::Inside);
 
@@ -99,7 +91,8 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
     let mut actions_ui = ui.new_child(
         egui::UiBuilder::new().max_rect(actions).layout(egui::Layout::left_to_right(egui::Align::Center).with_main_align(egui::Align::Max)),
     );
-    launcher.actions(&mut actions_ui, &entry, &status, actions_w);
+    // No website/GitHub/releases links in the menu: download, update, open and remove only.
+    launcher.actions_in(&mut actions_ui, &entry, &status, actions_w, false);
 }
 
 /// The Craft icon, small and behind, and the original program's icon it gets on this Mac, larger

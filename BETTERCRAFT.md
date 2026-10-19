@@ -2,7 +2,15 @@
 
 A fork of [storytold/craft-launcher](https://github.com/storytold/craft-launcher) that stays in step
 with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours; or run
-`scripts/sync-upstream.sh`). It adds two toolbar buttons:
+`scripts/sync-upstream.sh`). The BetterCraft build keeps only what matters: install apps, update them, and set their Mac icons
+and names. It drops upstream's noise (app pages, release notes, announcements, social links,
+search, sort, the grid/table switch) and upstream's launcher self-update, which would replace this
+fork with ArtCraft Launcher; update the fork with `scripts/sync-upstream.sh` and
+`scripts/install-mac.sh`. Updates read the version from the app's `Info.plist`, which the icon and
+name changes never touch, and the icon/name pass skips any app the launcher is downloading or
+installing, then dresses the new version within seconds.
+
+What it adds:
 
 - **Compact rows** (always on, no button): one slim row per app with its icon pair (the Craft icon small and
   behind, the original program's icon it gets on the Mac larger and in front), name, one status

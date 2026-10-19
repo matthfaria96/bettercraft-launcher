@@ -74,8 +74,10 @@ mod store {
     }
 }
 
-/// Compact rows everywhere but upstream's own UI tests, which check upstream's cards.
-pub(crate) fn compact() -> bool {
+/// The BetterCraft build: everywhere but upstream's own UI tests, which check upstream's look and
+/// behaviour. Turns on the compact rows and turns off the noise (app pages, announcements, social
+/// links, grid/table switch) and upstream's launcher self-update.
+pub(crate) fn fork() -> bool {
     !cfg!(feature = "upstream-look")
 }
 

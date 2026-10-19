@@ -106,6 +106,11 @@ mod imp {
             .entries
             .iter()
             .filter_map(|e| {
+                // Never touch an app while the launcher downloads, installs or removes it: the
+                // update replaces the bundle, and the next pass dresses the new one.
+                if e.job.is_some() {
+                    return None;
+                }
                 let location = &e.installed.as_ref()?.location;
                 location.ends_with(".app").then(|| (e.app.id.to_string(), PathBuf::from(location)))
             })

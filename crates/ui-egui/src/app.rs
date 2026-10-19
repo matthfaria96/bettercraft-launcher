@@ -449,6 +449,8 @@ impl LauncherUi {
                 }
                 true
             }
+            // BetterCraft: never offer or install upstream's launcher over this fork.
+            Event::LauncherUpdate(_) if crate::bettercraft::fork() => false,
             Event::LauncherUpdate(r) => {
                 // Whether the launcher can replace itself is only known once an update is found.
                 self.caps = self.backend.capabilities();
