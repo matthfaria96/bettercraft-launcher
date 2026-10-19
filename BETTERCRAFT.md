@@ -54,9 +54,13 @@ personal study only.
 
 ## Launcher icon and installing on macOS
 
-The BetterCraft icon (`assets/bettercraft/launcher-icon-source.png`) replaces the ArtCraft icon in
-the app bundle. `scripts/make-launcher-icon.sh` turns the source art into
-`assets/bettercraft/bettercraft-launcher.icns` (macOS rounded square with margin), and
-`scripts/install-mac.sh` builds the app, swaps that icon in, re-signs, installs
-`/Applications/BetterCraft Launcher.app` and fails if the installed icon isn't byte-for-byte ours.
-Upstream's own icon files are left untouched, so their changes never conflict with this one.
+The launcher's own icon follows the icon set. Normal uses the official logo
+(`assets/bettercraft/logo-normal.icns`), which `scripts/install-mac.sh` puts in the bundle, then
+re-signs, installs `/Applications/BetterCraft Launcher.app` and checks the installed icon is
+byte-for-byte that one. In Study the launcher shows the older "A" logo
+(`assets/bettercraft/logo-study.icns`, from `scripts/make-launcher-icon.sh`) as its Finder icon and
+its running Dock icon, and the official one again when switched back. Upstream's own icon files
+are left untouched.
+
+Settings in this build hold only Updates, Appearance and Mac icons (no language, pre-releases,
+install folder, background options or Quit button).

@@ -102,6 +102,7 @@ mod imp {
         }
         let mode = super::super::mac_mode();
         let style = super::super::icon_set();
+        let set = style;
         let apps: Vec<(String, PathBuf)> = launcher
             .entries
             .iter()
@@ -129,6 +130,10 @@ mod imp {
                         error = Some(format!("{}: {e}", bundle.display()));
                     }
                 }
+            }
+            // The launcher's own bundle: the old logo as its Finder icon in Study, none in Normal.
+            if let Err(e) = dress_launcher(set == IconSet::Study) {
+                log::warn!("BetterCraft: couldn't change the launcher's icon: {e}");
             }
             // The Dock caches icons: restarting it (a second's blink) makes it read them again.
             // A Craft App that is open keeps its old Dock icon until it is opened again.
@@ -286,6 +291,31 @@ mod imp {
             let name = program.rsplit('/').next().unwrap_or(program);
             Err(format!("{name}: {}", String::from_utf8_lossy(&out.stderr).trim()))
         }
+    }
+
+    /// Gives the launcher's bundle the Study logo as its Finder icon, or takes it off.
+    fn dress_launcher(study: bool) -> Result<(), String> {
+        let Some(bundle) = crate::bettercraft::launcher_icon::own_bundle() else { return Ok(()) };
+        if study == has_custom_icon(&bundle) {
+            return Ok(());
+        }
+        let icon = if study {
+            let path = std::env::temp_dir().join("bettercraft-icons").join("launcher-study.icns");
+            if let Some(dir) = path.parent() {
+                std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+            }
+            std::fs::write(&path, crate::bettercraft::launcher_icon::STUDY_ICNS).map_err(|e| e.to_string())?;
+            path.display().to_string()
+        } else {
+            String::new()
+        };
+        let out =
+            Command::new("/usr/bin/osascript").args(["-l", "JavaScript", "-e", SET_ICON, &icon]).arg(&bundle).output().map_err(|e| e.to_string())?;
+        if !out.status.success() {
+            return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
+        }
+        let _ = Command::new("/usr/bin/touch").arg(&bundle).status();
+        Ok(())
     }
 
     /// The bundled `.icns` for `id`, written to a temporary folder for AppKit to read.

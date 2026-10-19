@@ -5,7 +5,7 @@ set -eu
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
 ARCH="$(uname -m | sed 's/arm64/aarch64/')"
-ICON=assets/bettercraft/bettercraft-launcher.icns
+ICON=assets/bettercraft/logo-normal.icns
 DEST="/Applications/BetterCraft Launcher.app"
 
 packaging/macos/package.sh --arch "$ARCH"

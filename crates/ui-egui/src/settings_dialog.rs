@@ -40,9 +40,9 @@ impl LauncherUi {
         ui.set_max_height(size.y);
         let hero_h = sheet::hero(
             ui,
-            Some(crate::icons::artcraft_mark()),
+            Some(if crate::bettercraft::fork() { crate::bettercraft::settings_logo() } else { crate::icons::artcraft_mark() }),
             tl!("Settings"),
-            &format!("ArtCraft Launcher {}", env!("CARGO_PKG_VERSION")),
+            &format!("{} {}", if crate::bettercraft::fork() { "BetterCraft Launcher" } else { "ArtCraft Launcher" }, env!("CARGO_PKG_VERSION")),
             |_| {},
         );
 
@@ -68,7 +68,10 @@ impl LauncherUi {
         egui::Frame::new().inner_margin(egui::Margin::symmetric(theme::PAD as i8, 16)).show(ui, |ui| {
             ui.set_width(ui.available_width());
             let quit = |ui: &mut Ui, host: &mut dyn Host| {
-                if self.caps.manage_apps && widgets::button(ui, tl!("Quit ArtCraft Launcher"), Kind::Secondary, 0.0).clicked() {
+                if !crate::bettercraft::fork()
+                    && self.caps.manage_apps
+                    && widgets::button(ui, tl!("Quit ArtCraft Launcher"), Kind::Secondary, 0.0).clicked()
+                {
                     host.quit();
                 }
             };
@@ -93,6 +96,20 @@ impl LauncherUi {
         // The columns are drawn from two closures that both need `self` and `host`: the pieces
         // are drawn one after the other, through a cell, never at the same time (were they ever,
         // the second would be skipped rather than panic).
+        // BetterCraft: only updates, appearance and the Mac icons.
+        if crate::bettercraft::fork() {
+            sheet::columns(
+                ui,
+                wide,
+                theme::COLUMN_GAP,
+                |ui| {
+                    self.settings_updates(ui);
+                    self.settings_appearance(ui);
+                },
+                crate::bettercraft::settings_panel,
+            );
+            return;
+        }
         let state = std::cell::RefCell::new((&mut *self, host));
         sheet::columns(
             ui,
@@ -104,18 +121,13 @@ impl LauncherUi {
                 this.settings_language(ui);
                 this.settings_updates(ui);
                 this.settings_appearance(ui);
-                if crate::bettercraft::fork() {
-                    crate::bettercraft::settings_panel(ui);
-                }
             },
             |ui| {
                 let Ok(mut state) = state.try_borrow_mut() else { return };
                 let (this, host) = &mut *state;
                 this.settings_install(ui, &mut **host);
                 this.settings_background(ui, &mut **host);
-                if !crate::bettercraft::fork() {
-                    this.settings_community(ui);
-                }
+                this.settings_community(ui);
             },
         );
     }
@@ -165,7 +177,9 @@ impl LauncherUi {
                 self.trigger_auto_updates();
             }
             ui.checkbox(&mut self.settings.notify, tl!("Notify me when an installed app has an update"));
-            ui.checkbox(&mut self.settings.prereleases, tl!("Include pre-releases (betas and release candidates)"));
+            if !crate::bettercraft::fork() {
+                ui.checkbox(&mut self.settings.prereleases, tl!("Include pre-releases (betas and release candidates)"));
+            }
         });
     }
 

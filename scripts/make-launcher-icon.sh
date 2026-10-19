@@ -1,5 +1,5 @@
 #!/bin/sh
-# BetterCraft: builds assets/bettercraft/bettercraft-launcher.icns from launcher-icon-source.png.
+# BetterCraft: builds assets/bettercraft/logo-study.icns (the Study-mode launcher icon) from launcher-icon-source.png.
 set -eu
 cd "$(dirname "$0")/.."
 OUT=assets/bettercraft
@@ -13,6 +13,6 @@ for s in 16 32 128 256 512; do
   d=$((s * 2))
   sips -z $d $d "$TMP/icon-1024.png" --out "$SET/icon_${s}x${s}@2x.png" >/dev/null
 done
-iconutil -c icns "$SET" -o "$OUT/bettercraft-launcher.icns"
+iconutil -c icns "$SET" -o "$OUT/logo-study.icns"
 cp "$TMP/icon-1024.png" "$OUT/bettercraft-launcher-1024.png"
-echo "wrote $OUT/bettercraft-launcher.icns"
+echo "wrote $OUT/logo-study.icns"

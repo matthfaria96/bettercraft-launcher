@@ -23,6 +23,7 @@ pub(crate) mod compact;
 #[cfg(target_os = "macos")]
 mod dock_icon;
 pub(crate) mod icons;
+pub(crate) mod launcher_icon;
 mod machine_icons;
 
 /// Saved choices as one small text file per key, in the user's data folder (desktop only).
@@ -159,6 +160,7 @@ pub(crate) fn toolbar(launcher: &LauncherUi, ui: &mut Ui) {
     load_choices();
     let changed = mac_mode_picker(ui) | RESET.swap(false, Ordering::Relaxed);
     machine_icons::sync(launcher, changed);
+    launcher_icon::sync_dock(ui.ctx(), icon_set());
     if machine_icons::status().busy {
         ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
     }
@@ -201,6 +203,12 @@ fn mac_mode_picker(ui: &mut Ui) -> bool {
         ui.ctx().request_repaint();
     }
     changed
+}
+
+/// The Settings header's picture: the launcher's logo for the current set.
+pub(crate) fn settings_logo() -> egui::ImageSource<'static> {
+    load_choices();
+    launcher_icon::logo(icon_set())
 }
 
 /// The Settings panel: the official Normal set or the unofficial Study set, as two cards showing
