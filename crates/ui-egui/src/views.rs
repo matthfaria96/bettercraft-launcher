@@ -326,7 +326,7 @@ impl LauncherUi {
             let short = fmt(tl!("GitHub limit hit; back in {min} min"), &[("min", &min)]);
             (format!("· {full}"), format!("· {short}"))
         });
-        use artcraft_launcher_core::catalog::{GITHUB_URL, SOCIAL, WEBSITE_URL};
+        use artcraft_launcher_core::catalog::{AUTHOR_URL, GITHUB_URL, SOCIAL, WEBSITE_URL};
         // Every link is an icon, reading Website, GitHub, Discord, then the social accounts.
         let named =
             |name: &'static str, label: &str, url: &'static str| widgets::IconLink { name, label: label.to_string(), tip: label.to_string(), url };
@@ -349,6 +349,7 @@ impl LauncherUi {
         if crate::bettercraft::fork() {
             links.clear();
         }
+        links.push(named("Website", "witchmymac.com", AUTHOR_URL));
         let icon = 13.0;
         let spacing = ui.spacing().item_spacing.x;
         // The icons on the right keep their size; the status on the left gets what is left and

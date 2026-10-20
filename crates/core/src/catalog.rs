@@ -149,6 +149,8 @@ pub const SUITE: [CraftApp; 13] = [
 
 /// ArtCraft's website.
 pub const WEBSITE_URL: &str = "https://getartcraft.com";
+/// The BetterCraft fork author's site (Matheus Faria).
+pub const AUTHOR_URL: &str = "http://witchmymac.com";
 /// The GitHub account every Craft App's repository lives under: the only one the launcher
 /// installs from, whatever the release feed says.
 pub const GITHUB_OWNER: &str = "storytold";

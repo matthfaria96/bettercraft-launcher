@@ -55,15 +55,16 @@ impl Tray {
     pub fn new(wake: impl Fn() + Send + Sync + Clone + 'static, on_quit: impl Fn() + Send + Sync + 'static) -> Result<Self, String> {
         let show = MenuItem::new(i18n::t("Show ArtCraft Launcher"), true, None);
         let check = MenuItem::new(i18n::t("Check for Updates"), true, None);
-        use artcraft_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
+        use artcraft_launcher_core::catalog::{AUTHOR_URL, GITHUB_URL, WEBSITE_URL};
         let website = MenuItem::new(i18n::t("Visit getartcraft.com"), true, None);
         let github = MenuItem::new(i18n::t("ArtCraft on GitHub"), true, None);
+        let author = MenuItem::new(i18n::t("Visit witchmymac.com"), true, None);
         let discord = MenuItem::new(i18n::t("Join the ArtCraft Discord"), true, None);
         let quit = MenuItem::new(i18n::t("Quit ArtCraft Launcher"), true, None);
         let menu = Menu::new();
-        menu.append_items(&[&show, &check, &PredefinedMenuItem::separator(), &website, &github, &discord, &PredefinedMenuItem::separator(), &quit])
+        menu.append_items(&[&show, &check, &PredefinedMenuItem::separator(), &website, &github, &discord, &author, &PredefinedMenuItem::separator(), &quit])
             .map_err(|e| e.to_string())?;
-        let links = [(website.id().clone(), WEBSITE_URL), (github.id().clone(), GITHUB_URL)];
+        let links = [(website.id().clone(), WEBSITE_URL), (github.id().clone(), GITHUB_URL), (author.id().clone(), AUTHOR_URL)];
         let discord_id = discord.id().clone();
         let icon = identity(TrayIconBuilder::new())
             .with_menu(Box::new(menu))
@@ -112,6 +113,7 @@ impl Tray {
             (website, "Visit getartcraft.com"),
             (github, "ArtCraft on GitHub"),
             (discord, "Join the ArtCraft Discord"),
+            (author, "Visit witchmymac.com"),
             (quit, "Quit ArtCraft Launcher"),
         ];
         Ok(Self { icon, show: show_id, check: check_id, quit: quit_id, rx, tooltip: String::new(), language: String::new(), labels })
