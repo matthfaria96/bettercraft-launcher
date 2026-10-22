@@ -101,27 +101,26 @@ self-update). You need Rust 1.90 or newer and, on Linux, the windowing headers.
 ./scripts/install-mac.sh
 ```
 
-**Windows** — build and run the executable:
+**Windows** — `scripts/install-windows.ps1` builds the app, installs it for the current user as
+`%LOCALAPPDATA%\Programs\BetterCraft Launcher` with a Start menu shortcut, and opens it (PowerShell):
 
 ```powershell
-cargo build --release -p artcraft-launcher
-target\release\artcraft-launcher.exe
+.\scripts\install-windows.ps1
 ```
 
-`packaging/windows/package.ps1` can also build the per-user MSI installer (it needs the WiX
-Toolset). Apps installed for all users (under `Program Files`) have their Start menu shortcuts in
-an all-users folder, so changing their icons needs the launcher running as administrator.
-
-**Linux** — install the windowing headers, then build and run:
+**Linux** — `scripts/install-linux.sh` builds the app, installs it as
+`~/.local/bin/artcraft-launcher` with a menu entry and icon, and opens it. Install the windowing
+headers first (Debian/Ubuntu:
+`sudo apt install libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev`):
 
 ```sh
-sudo apt install libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev  # Debian/Ubuntu
-cargo build --release -p artcraft-launcher
-target/release/artcraft-launcher
+./scripts/install-linux.sh
 ```
 
 Then install the Craft apps and set their icons: the toolbar's "Which icons?" switches between the
 apps' own icons and the BetterCraft icons, and Settings → Icons has the Normal and Study sets.
+On Windows, apps installed for all users (under `Program Files`) have their Start menu shortcuts in
+an all-users folder, so changing their icons needs the launcher running as administrator.
 
 Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/craft-icons/`, `assets/study-icons/`,
 `assets/bettercraft/`, `scripts/`, this file and the sync workflow. Upstream files touched: small
