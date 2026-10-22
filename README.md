@@ -43,6 +43,7 @@
 <p align="center">
   <a href="#what-it-does">What it does</a> ·
   <a href="#features">Features</a> ·
+  <a href="#installing">Installing</a> ·
   <a href="#downloads">Downloads</a> ·
   <a href="#build-from-source">Build from source</a> ·
   <a href="#the-craft-app-suite">Craft App Suite</a> ·
@@ -183,6 +184,41 @@ artcraft-launcher
 | File | What it is |
 |---|---|
 | `artcraft-launcher-web-<ver>.zip` | The catalog as a static site you can host anywhere; see [`packaging/web/README.md`](packaging/web/README.md) |
+
+## Installing
+
+Build the launcher from source and install it with one command per platform. You need Rust 1.90 or
+newer and, on Linux, the windowing headers (see [Build from source](#build-from-source)).
+
+**macOS**
+
+```sh
+./scripts/install-mac.sh
+```
+
+Builds and installs `/Applications/BetterCraft Launcher.app`, then opens it.
+
+**Windows** (PowerShell)
+
+```powershell
+.\scripts\install-windows.ps1
+```
+
+Builds and installs a per-user copy at `%LOCALAPPDATA%\Programs\BetterCraft Launcher` with a Start
+menu shortcut, then opens it.
+
+**Linux**
+
+```sh
+./scripts/install-linux.sh
+```
+
+Builds and installs `~/.local/bin/artcraft-launcher` with a menu entry and icon, then opens it.
+
+Then install the Craft apps and set their icons: the toolbar's "Which icons?" switches between the
+apps' own icons and the BetterCraft icons, and Settings → Icons has the Normal and Study sets. On
+Windows, apps installed for all users (under `Program Files`) need the launcher running as
+administrator to change their shortcuts.
 
 ## Build from source
 
