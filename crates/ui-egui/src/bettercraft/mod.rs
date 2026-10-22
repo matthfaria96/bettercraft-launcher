@@ -24,7 +24,11 @@ pub(crate) mod compact;
 mod dock_icon;
 pub(crate) mod icons;
 pub(crate) mod launcher_icon;
+#[cfg(target_os = "linux")]
+mod linux_icons;
 mod machine_icons;
+#[cfg(windows)]
+mod windows_icons;
 
 /// Saved choices as one small text file per key, in the user's data folder (desktop only).
 mod store {
@@ -146,6 +150,18 @@ fn say(en: &'static str, pt: &'static str) -> &'static str {
     if crate::i18n::current().code().starts_with("pt") { pt } else { en }
 }
 
+/// Where the swapped icons show, in the current language: Finder/Launchpad/Dock on macOS, the
+/// Start menu/taskbar/desktop on Windows, the applications menu and dock on Linux.
+fn surfaces() -> &'static str {
+    if cfg!(target_os = "macos") {
+        say("Finder, Launchpad and the Dock", "no Finder, no Launchpad e no Dock")
+    } else if cfg!(windows) {
+        say("the Start menu, the taskbar and the desktop", "no menu Iniciar, na barra de tarefas e na área de trabalho")
+    } else {
+        say("the applications menu and the dock", "no menu de aplicativos e no dock")
+    }
+}
+
 /// The label of the "custom" choice and badge: NEW for the official set, STUDY for the other.
 pub(crate) fn custom_label() -> &'static str {
     match icon_set() {
@@ -174,16 +190,19 @@ fn mac_mode_picker(ui: &mut Ui) -> bool {
     let status = machine_icons::status();
     let caption = if status.busy { say("Which icons? …", "Quais ícones usar? …") } else { say("Which icons?", "Quais ícones usar?") };
     let mut tip = match icon_set() {
-        IconSet::Craft => say(
-            "Craft originals: the apps' own icons. Redesign: the BetterCraft icons in Finder, Launchpad and the Dock (names stay).",
-            "Originais Craft: os ícones dos próprios apps. Redesign: os ícones BetterCraft no Finder, no Launchpad e no Dock (os nomes ficam).",
-        ),
+        IconSet::Craft => {
+            if crate::i18n::current().code().starts_with("pt") {
+                format!("Originais Craft: os ícones dos próprios apps. Redesign: os ícones BetterCraft {} (os nomes ficam).", surfaces())
+            } else {
+                format!("Craft originals: the apps' own icons. Redesign: the BetterCraft icons in {} (names stay).", surfaces())
+            }
+        }
         IconSet::Study => say(
             "Study mode (unofficial, set in Settings): the original programs' icons with the CRAFT ribbon, and their names.",
             "Modo estudo (não oficial, nas Configurações): ícones dos programas originais com a fita CRAFT, e os nomes deles.",
-        ),
-    }
-    .to_string();
+        )
+        .to_string(),
+    };
     if status.total > 0 {
         tip.push_str(&format!("\n{} {}/{}", custom_label(), status.icons, status.total));
     }
@@ -229,7 +248,7 @@ pub(crate) fn settings_logo() -> egui::ImageSource<'static> {
 /// their icons; the chosen one is outlined in the accent colour and ticked.
 pub(crate) fn settings_panel(ui: &mut Ui) {
     load_choices();
-    crate::sheet::panel(ui, say("Icons on this Mac", "Ícones no Mac"), |ui| {
+    crate::sheet::panel(ui, say("Icons on this computer", "Ícones neste computador"), |ui| {
         let current = icon_set();
         let gap = 10.0;
         let width = ((ui.available_width() - gap) / 2.0).max(140.0);

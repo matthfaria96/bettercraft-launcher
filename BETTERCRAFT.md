@@ -2,8 +2,8 @@
 
 A fork of [storytold/craft-launcher](https://github.com/storytold/craft-launcher) that stays in step
 with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours; or run
-`scripts/sync-upstream.sh`). The BetterCraft build keeps only what matters: install apps, update them, and set their Mac icons
-and names. It drops upstream's noise (app pages, release notes, announcements, social links,
+`scripts/sync-upstream.sh`). The BetterCraft build keeps only what matters: install apps, update them, and set their icons
+and names (on macOS, Windows and Linux). It drops upstream's noise (app pages, release notes, announcements, social links,
 search, sort, the grid/table switch) and upstream's launcher self-update, which would replace this
 fork with ArtCraft Launcher; update the fork with `scripts/sync-upstream.sh` and
 `scripts/install-mac.sh`. Updates read the version from the app's `Info.plist`, which the icon and
@@ -12,21 +12,64 @@ installing, then dresses the new version within seconds.
 
 What it adds:
 
-- **Mac icons [ Clone | New ]** (toolbar): *New* gives every installed Craft App the BetterCraft
+- **Icons [ Clone | New ]** (toolbar): *New* gives every installed Craft App the BetterCraft
   icon (`assets/craft-icons/`, from `scripts/make-craft-icons.sh`) in Finder, Launchpad and the
-  Dock, including the Dock icon of a running app; the apps keep their names. *Clone* puts each
-  app's own icon back. Each installed row shows NEW (green) or CLONE (red).
-- **Settings → Mac icons: Normal | Study** (two cards with previews): *Normal* is the official look
+  Dock on macOS (including the Dock icon of a running app), in the Start menu, taskbar and
+  desktop on Windows, or in the applications menu and dock on Linux (AppImages); the apps keep
+  their names. *Clone* puts each app's own icon back. Each installed row shows NEW (green) or
+  CLONE (red).
+- **Settings → Icons: Normal | Study** (two cards with previews): *Normal* is the official look
   above. *Study* (unofficial, for testing) uses the original programs' icons with a yellow CRAFT
   corner ribbon (`assets/study-icons/`, from `scripts/make-study-icons.sh`) and shows the original
-  programs' names (e.g. PhotoCraft → Adobe Photoshop) through a localized display name. Switching
-  re-dresses the installed apps at once.
+  programs' names (e.g. PhotoCraft → Adobe Photoshop) through a localized display name (macOS) or
+  the shortcut's name (Windows). Switching re-dresses the installed apps at once.
 
 How it stays safe: the `.app` keeps its file name and version keys, so the launcher still finds,
 checks and updates it. After a change the app is re-signed ad hoc (keeping its entitlements). The
 Craft originals (bundle `.icns`, the icons embedded in the executable, with their offsets) are kept
 inside the bundle, so going back never depends on the icon pictures. App updates replace the
 bundle; the launcher dresses the new version within seconds and never touches an app mid-update.
+
+## Windows
+
+On Windows the launcher dresses the same two sets through the Start menu, desktop and taskbar
+shortcuts (`.lnk` files) that point at each installed Craft App:
+
+- **Redesign** points each shortcut's icon at the BetterCraft `.ico` the launcher writes into
+  `%APPDATA%\BetterCraft Launcher\icons` (one PNG frame per icon, wrapped as an ICO); the
+  shortcuts keep their names.
+- **Study** also renames each shortcut to the original program's name (e.g. `PhotoCraft` →
+  `Adobe Photoshop`), so the name shows everywhere the shortcut does.
+
+Shortcuts are found by walking the Start menu (all-users and per-user), the desktop and the
+taskbar's pinned items for the app's `.exe`. The `.lnk` binary format is the shell's own, so the
+launcher drives `WScript.Shell` through PowerShell rather than parsing the file itself; a rename
+is a plain file rename, which leaves every other shortcut property untouched. Everything it
+changes is recorded in a marker under `%APPDATA%\BetterCraft Launcher\apps`, so switching back to
+"Clone" restores each shortcut's original icon and name without keeping the pictures.
+
+The running window's taskbar icon (the app draws it itself, so it is not a shortcut) and the
+`.exe`'s own Explorer icon (embedded in a signed executable) are left alone. Shortcuts the shell
+stores for all users (e.g. a machine-wide install under `Program Files`) need the launcher to run
+as administrator to be rewritten; a permission failure shows in the toolbar's "Last error" and
+never touches the app.
+
+## Linux
+
+On Linux the launcher dresses the apps it installed as **AppImages** (the install method whose
+freedesktop files it owns): the menu entry `<data>/applications/ai.storyteller.<app>.desktop`
+(marked `X-ArtCraft-Launcher=true`) and its icon
+`<data>/icons/hicolor/128x128/apps/ai.storyteller.<app>.png`.
+
+- **Redesign** overwrites the icon PNG with the BetterCraft icon (resized to 128 px); the entry
+  keeps its name.
+- **Study** also changes the entry's `Name=` to the original program's name (e.g. `PhotoCraft` →
+  `Adobe Photoshop`).
+
+The state lives in the entry itself (an `X-BetterCraft-Style` key), so an update that rewrites the
+entry drops the dressing and the next pass dresses the new copy — the same in-place approach as
+macOS. "Clone" restores the app's own 128 px picture and the app name. Packages (`.deb`, `.rpm`,
+Arch), Flatpaks and tarballs are left to their own desktop integration.
 
 Study set (original program and name for each Craft App):
 
@@ -46,13 +89,47 @@ Study set (original program and name for each Craft App):
 | GridCraft | Microsoft Excel |
 | CADCraft | AutoCAD |
 
+## Installing
+
+BetterCraft Launcher is built from source (the fork drops upstream's release packaging and
+self-update). You need Rust 1.90 or newer and, on Linux, the windowing headers.
+
+**macOS** — `scripts/install-mac.sh` builds the app, installs it as
+`/Applications/BetterCraft Launcher.app` and opens it:
+
+```sh
+./scripts/install-mac.sh
+```
+
+**Windows** — build and run the executable:
+
+```powershell
+cargo build --release -p artcraft-launcher
+target\release\artcraft-launcher.exe
+```
+
+`packaging/windows/package.ps1` can also build the per-user MSI installer (it needs the WiX
+Toolset). Apps installed for all users (under `Program Files`) have their Start menu shortcuts in
+an all-users folder, so changing their icons needs the launcher running as administrator.
+
+**Linux** — install the windowing headers, then build and run:
+
+```sh
+sudo apt install libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev  # Debian/Ubuntu
+cargo build --release -p artcraft-launcher
+target/release/artcraft-launcher
+```
+
+Then install the Craft apps and set their icons: the toolbar's "Which icons?" switches between the
+apps' own icons and the BetterCraft icons, and Settings → Icons has the Normal and Study sets.
+
 Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/craft-icons/`, `assets/study-icons/`,
 `assets/bettercraft/`, `scripts/`, this file and the sync workflow. Upstream files touched: small
 hooks in `lib.rs`, `views.rs`, `app.rs` (no upstream self-update) and `settings_dialog.rs`, plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
 upstream's UI tests keep checking upstream's cards. The Study set's original program icons and names are trademarks of their owners, used here for
 personal study only.
 
-## Launcher icon and installing on macOS
+## Launcher icon
 
 The launcher's own icon follows the icon set. Normal uses the official logo
 (`assets/bettercraft/logo-normal.icns`), which `scripts/install-mac.sh` puts in the bundle, then
@@ -62,5 +139,5 @@ byte-for-byte that one. In Study the launcher shows the older "A" logo
 its running Dock icon, and the official one again when switched back. Upstream's own icon files
 are left untouched.
 
-Settings in this build hold only Updates, Appearance and Mac icons (no language, pre-releases,
+Settings in this build hold only Updates, Appearance and icons (no language, pre-releases,
 install folder, background options or Quit button).

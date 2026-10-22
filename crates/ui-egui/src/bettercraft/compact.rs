@@ -118,9 +118,9 @@ fn icon_pair(ui: &Ui, id: &str, left_mid: egui::Pos2, in_colour: bool, row_fill:
 fn mac_badge(ui: &mut Ui, id: &str, t: &Tokens) {
     let Some(state) = super::machine_icons::app_state(id) else { return };
     let tip = match (state.icons, state.names) {
-        (true, true) => super::say("Study icon and name on this Mac", "Ícone e nome de estudo neste Mac"),
-        (true, false) => super::say("BetterCraft icon on this Mac", "Ícone BetterCraft neste Mac"),
-        (false, _) => super::say("The app's own icon on this Mac", "Ícone do próprio app neste Mac"),
+        (true, true) => super::say("Study icon and name on this computer", "Ícone e nome de estudo neste computador"),
+        (true, false) => super::say("BetterCraft icon on this computer", "Ícone BetterCraft neste computador"),
+        (false, _) => super::say("The app's own icon on this computer", "Ícone do próprio app neste computador"),
     };
     let (text, color) = if state.icons { (super::custom_label(), t.good) } else { (super::say("Original", "Original"), t.bad) };
     widgets::badge(ui, text, color).on_hover_text(tip);

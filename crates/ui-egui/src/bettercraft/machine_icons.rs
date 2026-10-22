@@ -15,10 +15,10 @@
 
 use crate::LauncherUi;
 
-/// What one installed app carries on this Mac.
+/// What one installed app carries on this machine.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct AppState {
-    /// The original program's icon everywhere: Finder, the bundle and the Dock.
+    /// The original program's icon where the shell shows it.
     pub icons: bool,
     /// The original program's name.
     pub names: bool,
@@ -26,11 +26,11 @@ pub(crate) struct AppState {
 
 /// What the last pass found, for the switch's label and tooltip.
 #[derive(Clone, Debug, Default)]
-pub(super) struct Status {
+pub(crate) struct Status {
     pub busy: bool,
     /// Installed apps that carry the original icon.
     pub icons: usize,
-    /// Installed `.app` bundles.
+    /// Installed apps the pass looked at.
     pub total: usize,
     /// Each installed app's id and what it carries, for the badge on its row.
     pub apps: Vec<(String, AppState)>,
@@ -42,20 +42,40 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
     imp::sync(launcher, toggled);
 }
 
+#[cfg(windows)]
+pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
+    super::windows_icons::sync(launcher, toggled);
+}
+
+#[cfg(target_os = "linux")]
+pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
+    super::linux_icons::sync(launcher, toggled);
+}
+
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
+pub(super) fn sync(_launcher: &LauncherUi, _toggled: bool) {}
+
 #[cfg(target_os = "macos")]
 pub(super) fn status() -> Status {
     imp::status()
 }
 
-#[cfg(not(target_os = "macos"))]
-pub(super) fn sync(_launcher: &LauncherUi, _toggled: bool) {}
+#[cfg(windows)]
+pub(super) fn status() -> Status {
+    super::windows_icons::status()
+}
+
+#[cfg(target_os = "linux")]
+pub(super) fn status() -> Status {
+    super::linux_icons::status()
+}
 
 /// What the installed app `id` carries, once a pass has looked at it.
 pub(crate) fn app_state(id: &str) -> Option<AppState> {
     status().apps.into_iter().find(|(app, _)| app == id).map(|(_, state)| state)
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
 pub(super) fn status() -> Status {
     Status::default()
 }
