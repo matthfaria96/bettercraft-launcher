@@ -52,20 +52,25 @@ marcas dos seus donos.
 
 ### macOS
 
-1. Baixe `BetterCraftLauncher-x.y.z.dmg` em
-   [Releases](https://github.com/matthfaria96/bettercraft-launcher/releases/latest) ou em
-   [witchmymac.com](https://witchmymac.com).
-2. Abra o DMG e arraste o **BetterCraft Launcher** para a pasta Aplicativos.
+Escolha um:
 
-O app não é notarizado pela Apple, então o macOS bloqueia na primeira vez que você abre. Para
-liberar, cole isto no Terminal:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/BetterCraft Launcher.app"
-```
-
-Isso só remove a marca de "baixado da internet". Sem Terminal: abra o app, clique em OK no aviso
-e vá em Ajustes do Sistema → Privacidade e Segurança → **Abrir Mesmo Assim**.
+1. **Terminal, uma linha (recomendado).** Cole isto no Terminal:
+   ```sh
+   curl -fsSL https://witchmymac.com/install.sh | bash -s bettercraft
+   ```
+   Ele baixa a versão mais nova do GitHub, confere o SHA-256, instala o BetterCraft Launcher em
+   Aplicativos e abre. Não aparece aviso do macOS, porque arquivos baixados pelo `curl` não ganham
+   a marca de "baixado da internet". Rode a mesma linha de novo para atualizar. O script é aberto:
+   [install.sh](https://witchmymac.com/install.sh).
+2. **Baixe o DMG** em [Releases](https://github.com/matthfaria96/bettercraft-launcher/releases) ou em
+   [witchmymac.com](https://witchmymac.com), arraste o BetterCraft Launcher para Aplicativos e
+   libere uma vez com:
+   ```sh
+   xattr -dr com.apple.quarantine "/Applications/BetterCraft Launcher.app"
+   ```
+   Ele só tira daquele app a marca de "baixado da internet".
+3. **Baixe o DMG** e libere pelos Ajustes do Sistema: abra o app, clique em OK no aviso e vá em
+   Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim.
 
 Prefere compilar? Precisa do [Rust](https://rustup.rs) e das ferramentas de linha de comando do
 Xcode:

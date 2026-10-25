@@ -52,20 +52,25 @@ trademarks of their owners.
 
 ### macOS
 
-1. Download `BetterCraftLauncher-x.y.z.dmg` from
-   [Releases](https://github.com/matthfaria96/bettercraft-launcher/releases/latest) or from
-   [witchmymac.com](https://witchmymac.com).
-2. Open the DMG and drag **BetterCraft Launcher** to the Applications folder.
+Pick one:
 
-The app is not notarized by Apple, so macOS blocks it the first time you open it. To allow it,
-paste this in Terminal:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/BetterCraft Launcher.app"
-```
-
-This only removes the "downloaded from the internet" mark. Without Terminal: open the app, click
-OK on the warning, then go to System Settings → Privacy & Security and click **Open Anyway**.
+1. **Terminal, one line (recommended).** Paste this into Terminal:
+   ```sh
+   curl -fsSL https://witchmymac.com/install.sh | bash -s bettercraft
+   ```
+   It downloads the latest release from GitHub, checks its SHA-256, installs BetterCraft Launcher
+   in Applications and opens it. There's no macOS warning, because files downloaded by `curl`
+   don't get the "downloaded from the internet" mark. Run the same line again to update. The
+   script is open: [install.sh](https://witchmymac.com/install.sh).
+2. **Download the DMG** from [Releases](https://github.com/matthfaria96/bettercraft-launcher/releases) or
+   [witchmymac.com](https://witchmymac.com), drag BetterCraft Launcher to Applications, then allow
+   it once with:
+   ```sh
+   xattr -dr com.apple.quarantine "/Applications/BetterCraft Launcher.app"
+   ```
+   It only removes the "downloaded from the internet" mark from that app.
+3. **Download the DMG** and allow it in System Settings: open the app, click OK on the warning,
+   then go to System Settings → Privacy & Security and click Open Anyway.
 
 Prefer to build it yourself? You need [Rust](https://rustup.rs) and the Xcode command line tools:
 
