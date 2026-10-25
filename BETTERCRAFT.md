@@ -141,7 +141,8 @@ personal study only.
 ## Launcher icon
 
 The launcher's own icon follows the icon set. Normal uses the official logo
-(`assets/bettercraft/logo-normal.icns`), which `scripts/install-mac.sh` puts in the bundle, then
+(`assets/bettercraft/logo-normal.icns`, made in the macOS icon shape by `scripts/make-launcher-icon.sh`
+from the full-bleed `logo-normal-source.png`, so it sits at the same size as other apps in the Dock), which `scripts/install-mac.sh` puts in the bundle, then
 re-signs, installs `/Applications/BetterCraft Launcher.app` and checks the installed icon is
 byte-for-byte that one. In Study the launcher shows the older "A" logo
 (`assets/bettercraft/logo-study.icns`, from `scripts/make-launcher-icon.sh`) as its Finder icon and
