@@ -88,6 +88,19 @@ pub(crate) fn fork() -> bool {
     !cfg!(feature = "upstream-look")
 }
 
+/// Screenshots for witchmymac.com (`BETTERCRAFT_SHOWCASE` set, desktop only): the icon pass only
+/// reports what it would do and never touches an installed app. See CLAUDE.md.
+pub(crate) fn showcase() -> bool {
+    std::env::var_os("BETTERCRAFT_SHOWCASE").is_some()
+}
+
+impl LauncherUi {
+    /// Opens Settings, for the showcase screenshots (`BETTERCRAFT_SHOWCASE=settings`).
+    pub fn open_settings(&mut self) {
+        self.dialog = Some(crate::app::Dialog::Settings);
+    }
+}
+
 /// Whether the installed apps get the launcher's icons on this Mac: as they come (Clone), or with
 /// the icons of the chosen [`IconSet`] (and, for the study set, its names).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

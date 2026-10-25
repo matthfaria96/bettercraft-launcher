@@ -8,6 +8,7 @@
 mod logging;
 mod motion;
 mod settings_file;
+mod showcase;
 #[cfg(target_os = "macos")]
 mod spaces;
 #[cfg(target_os = "linux")]
@@ -50,9 +51,14 @@ fn main() -> ExitCode {
     let mut hidden = args.iter().any(|a| a == login::HIDDEN_FLAG);
 
     let wake: Wake = Arc::new(OnceLock::new());
-    let starts = match single_instance::claim(wake.clone()) {
-        Instance::Secondary => return ExitCode::SUCCESS,
-        Instance::Primary(rx) => rx,
+    // The showcase copy never talks to (or replaces) a launcher the user is running.
+    let starts = if showcase::on() {
+        channel().1
+    } else {
+        match single_instance::claim(wake.clone()) {
+            Instance::Secondary => return ExitCode::SUCCESS,
+            Instance::Primary(rx) => rx,
+        }
     };
     // The log file lives in the launcher's data folder (beside the executable in portable mode);
     // opened after the arguments (so `--version` leaves no file behind) and once this is the only
@@ -86,7 +92,10 @@ fn main() -> ExitCode {
 
     let backend_waker = waker.clone();
     let settings_path = settings_file::path(APP_ID);
-    let mut launcher = Launcher::new(Box::new(NativeBackend::new(move || backend_waker.wake())), starts, settings_path.clone());
+    // BetterCraft: a demo state in memory for screenshots (`BETTERCRAFT_SHOWCASE`, see CLAUDE.md).
+    let backend: Box<dyn Backend> =
+        if showcase::on() { Box::new(showcase::Demo::new()) } else { Box::new(NativeBackend::new(move || backend_waker.wake())) };
+    let mut launcher = Launcher::new(backend, starts, settings_path.clone());
     #[cfg(target_os = "linux")]
     {
         let theme_waker = waker.clone();
@@ -154,6 +163,11 @@ fn native_options(hidden: bool) -> eframe::NativeOptions {
         viewport = viewport.with_icon(egui::IconData::default());
     } else if let Some(icon) = icon {
         viewport = viewport.with_icon(icon);
+    }
+    // BetterCraft: the showcase window opens at `BETTERCRAFT_SHOWCASE_SIZE` ("1120x900"), not where it was left.
+    if let Some([w, h]) = showcase::size() {
+        viewport = viewport.with_inner_size([w, h]);
+        return eframe::NativeOptions { viewport, persist_window: false, wgpu_options: wgpu_options(), ..Default::default() };
     }
     eframe::NativeOptions { viewport, persist_window: true, wgpu_options: wgpu_options(), ..Default::default() }
 }
@@ -511,6 +525,16 @@ impl Launcher {
             self.restore_saved_settings(settings);
         }
         self.waker = Some(waker.clone());
+        if showcase::on() {
+            // Screenshots: no tray icon, no launcher update check.
+            if let Some(theme) = showcase::theme() {
+                self.ui.settings.theme = theme;
+            }
+            if showcase::settings() {
+                self.ui.open_settings();
+            }
+            return;
+        }
         let (wake, on_quit) = (waker.clone(), waker.clone());
         match tray::Tray::new(move || wake.wake(), move || on_quit.quit_from_tray()) {
             Ok(t) => self.tray = Some(t),

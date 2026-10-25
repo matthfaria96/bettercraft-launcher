@@ -123,6 +123,17 @@ mod imp {
         let mode = super::super::mac_mode();
         let style = super::super::icon_set();
         let set = style;
+        if crate::bettercraft::showcase() {
+            // Screenshots: show the badges the choice would give, change nothing on disk.
+            let state = AppState { icons: mode.icons(), names: mode.icons() && style.names() };
+            let apps: Vec<(String, AppState)> =
+                launcher.entries.iter().filter(|e| e.installed.is_some()).map(|e| (e.app.id.to_string(), state)).collect();
+            let icons = if state.icons { apps.len() } else { 0 };
+            if let Ok(mut s) = STATUS.lock() {
+                *s = Some(Status { busy: false, icons, total: apps.len(), error: None, apps });
+            }
+            return;
+        }
         let apps: Vec<(String, PathBuf)> = launcher
             .entries
             .iter()
