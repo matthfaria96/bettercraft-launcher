@@ -192,6 +192,20 @@ newer and, on Linux, the windowing headers (see [Build from source](#build-from-
 
 **macOS**
 
+Download `BetterCraftLauncher-x.y.z.dmg` from
+[Releases](https://github.com/matthfaria96/bettercraft-launcher/releases/latest) or
+[witchmymac.com](https://witchmymac.com) and drag **BetterCraft Launcher** to Applications. The app
+is not notarized, so macOS blocks it the first time; to allow it, paste in Terminal:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/BetterCraft Launcher.app"
+```
+
+This only removes the "downloaded from the internet" mark. Without Terminal: open the app, click
+OK, then System Settings → Privacy & Security → **Open Anyway**.
+
+Or build it from source:
+
 ```sh
 ./scripts/install-mac.sh
 ```

@@ -91,8 +91,12 @@ Study set (original program and name for each Craft App):
 
 ## Installing
 
-BetterCraft Launcher is built from source (the fork drops upstream's release packaging and
-self-update). You need Rust 1.90 or newer and, on Linux, the windowing headers.
+On macOS, download `BetterCraftLauncher-x.y.z.dmg` from the
+[Releases](https://github.com/matthfaria96/bettercraft-launcher/releases/latest) page or
+[witchmymac.com](https://witchmymac.com) (see the README for the first-launch steps; the app is ad-hoc
+signed, not notarized). Otherwise BetterCraft Launcher is built from source (the fork drops
+upstream's release workflow and self-update). You need Rust 1.90 or newer and, on Linux, the
+windowing headers.
 
 **macOS** — `scripts/install-mac.sh` builds the app, installs it as
 `/Applications/BetterCraft Launcher.app` and opens it:

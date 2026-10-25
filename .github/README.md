@@ -48,9 +48,26 @@ imitate (PhotoCraft → Adobe Photoshop, WordCraft → Microsoft Word…), with 
 the icon's corner. It is a test mode, not official. Those programs' icons and names are
 trademarks of their owners.
 
-## Install on macOS
+## Install
 
-Requires [Rust](https://rustup.rs) and the Xcode command line tools.
+### macOS
+
+1. Download `BetterCraftLauncher-x.y.z.dmg` from
+   [Releases](https://github.com/matthfaria96/bettercraft-launcher/releases/latest) or from
+   [witchmymac.com](https://witchmymac.com).
+2. Open the DMG and drag **BetterCraft Launcher** to the Applications folder.
+
+The app is not notarized by Apple, so macOS blocks it the first time you open it. To allow it,
+paste this in Terminal:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/BetterCraft Launcher.app"
+```
+
+This only removes the "downloaded from the internet" mark. Without Terminal: open the app, click
+OK on the warning, then go to System Settings → Privacy & Security and click **Open Anyway**.
+
+Prefer to build it yourself? You need [Rust](https://rustup.rs) and the Xcode command line tools:
 
 ```sh
 git clone https://github.com/matthfaria96/bettercraft-launcher.git
@@ -64,6 +81,22 @@ To pull in the original's latest changes and reinstall:
 ```sh
 scripts/sync-upstream.sh && scripts/install-mac.sh
 ```
+
+### Windows and Linux
+
+Build and install with one command (needs Rust 1.90 or newer; on Linux, the windowing headers
+listed in [BETTERCRAFT.md](../BETTERCRAFT.md#installing)):
+
+```powershell
+.\scripts\install-windows.ps1
+```
+
+```sh
+./scripts/install-linux.sh
+```
+
+Windows installs to `%LOCALAPPDATA%\Programs\BetterCraft Launcher` with a Start menu shortcut;
+Linux installs `~/.local/bin/artcraft-launcher` with a menu entry and icon.
 
 Technical details in [BETTERCRAFT.md](../BETTERCRAFT.md).
 
