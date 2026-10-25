@@ -13,6 +13,7 @@ mod spaces;
 #[cfg(target_os = "linux")]
 mod system_theme;
 mod tray;
+mod updater;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -516,6 +517,7 @@ impl Launcher {
             Err(e) => log::warn!("no tray icon: {e}"),
         }
         self.host.tray = self.tray.is_some();
+        updater::start();
     }
 
     fn restore_saved_settings(&mut self, mut settings: Settings) {
@@ -560,6 +562,7 @@ impl Launcher {
                 tray::TrayAction::Toggle => requests.push(Request::Toggle),
                 tray::TrayAction::Show => requests.push(Request::Show),
                 tray::TrayAction::Check => self.ui.check_now(),
+                tray::TrayAction::CheckLauncher => updater::check_now(),
                 // Straight to the browser: works while the window is hidden in the tray.
                 tray::TrayAction::Open(url) => {
                     if url == artcraft_launcher_core::catalog::DISCORD_APP_URL {

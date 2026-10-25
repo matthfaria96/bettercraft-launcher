@@ -112,6 +112,8 @@ if /usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$APP/Contents/Info.plist" >/
   exit 1
 fi
 printf 'APPL????' >"$APP/Contents/PkgInfo"
+# BetterCraft: the Sparkle helper that updates the launcher (packaging/macos/updater).
+"$HERE/updater/build.sh" "$APP/Contents/Helpers" "$SHORT_VERSION" "$ARCH"
 
 # Drop extended attributes picked up during the build (quarantine, FinderInfo) before signing:
 # `codesign --verify --strict` rejects them, and nothing after signing may touch the bundle.

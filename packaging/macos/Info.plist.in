@@ -43,6 +43,18 @@
   <true/>
   <key>NSRequiresAquaSystemAppearance</key>
   <false/>
+  <!-- BetterCraft: in-app updates through Sparkle (Contents/Helpers/BetterCraft Updater.app reads
+       these from here). CFBundleVersion, what Sparkle compares, must go up every release. -->
+  <key>SUFeedURL</key>
+  <string>https://witchmymac.com/appcast/bettercraft.xml</string>
+  <key>SUPublicEDKey</key>
+  <string>yhoDaYLDki5BV0c44pefouDhxbliuGqLKxXKXXK1Pb0=</string>
+  <key>SUEnableAutomaticChecks</key>
+  <true/>
+  <key>SUScheduledCheckInterval</key>
+  <integer>86400</integer>
+  <key>SUAutomaticallyUpdate</key>
+  <false/>
   <key>NSHumanReadableCopyright</key>
   <string>Copyright © 2026 ArtCraft Team and the ArtCraft Launcher contributors. MIT OR Apache-2.0.</string>
 </dict>

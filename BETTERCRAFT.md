@@ -101,7 +101,7 @@ or download `BetterCraftLauncher-x.y.z.dmg` from the
 [Releases](https://github.com/matthfaria96/bettercraft-launcher/releases) page or
 [witchmymac.com](https://witchmymac.com) (see the README for all three ways to install; the app is ad-hoc
 signed, not notarized). Otherwise BetterCraft Launcher is built from source (the fork drops
-upstream's release workflow and self-update). You need Rust 1.90 or newer and, on Linux, the
+upstream's release workflow and self-update; the macOS release updates itself through Sparkle, see below). You need Rust 1.90 or newer and, on Linux, the
 windowing headers.
 
 **macOS** — `scripts/install-mac.sh` builds the app, installs it as
@@ -132,9 +132,24 @@ apps' own icons and the BetterCraft icons, and Settings → Icons has the Normal
 On Windows, apps installed for all users (under `Program Files`) have their Start menu shortcuts in
 an all-users folder, so changing their icons needs the launcher running as administrator.
 
+## Launcher updates on macOS (Sparkle 2)
+
+Since 0.6.3 the macOS launcher updates itself from witchmymac.com, not from upstream (whose
+self-update would install ArtCraft Launcher). Sparkle is Objective-C and the Rust code has no
+`unsafe`, so it runs in a helper inside the bundle, `Contents/Helpers/BetterCraft Updater.app`,
+built by `packaging/macos/updater/build.sh` (called from `package.sh`; SwiftPM, Sparkle 2.10).
+The launcher starts it at launch (`apps/artcraft-launcher/src/updater.rs`: daily checks while the
+launcher runs; it quits with the launcher) and from the tray's "Check for Launcher Updates…". The
+helper updates the launcher's bundle: the feed (`https://witchmymac.com/appcast/bettercraft.xml`),
+the EdDSA key and the check interval are in `packaging/macos/Info.plist.in`, and before Sparkle
+relaunches it quits the running launcher. `CFBundleVersion` (the workspace version) must go up
+every release. Release flow: `package.sh --arch universal`, copy the app as `BetterCraft Launcher.app`
+with `assets/bettercraft/logo-normal.icns` as its icon, `~/Documents/witchmymac-release/sign-app.sh`,
+`make-dmg.sh`, then `make-appcast-item.sh` (see `~/Documents/witchmymac-release/UPDATES.md`).
+
 Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/craft-icons/`, `assets/study-icons/`,
-`assets/bettercraft/`, `scripts/`, this file and the sync workflow. Upstream files touched: small
-hooks in `lib.rs`, `views.rs`, `app.rs` (no upstream self-update) and `settings_dialog.rs`, plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
+`assets/bettercraft/`, `scripts/`, `packaging/macos/updater/`, `apps/artcraft-launcher/src/updater.rs`, this file and the sync workflow. Upstream files touched: small
+hooks in `lib.rs`, `views.rs`, `app.rs` (no upstream self-update) and `settings_dialog.rs`, the tray item (`tray.rs`, `main.rs`), the Sparkle keys in `Info.plist.in` and the helper call in `package.sh`, plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
 upstream's UI tests keep checking upstream's cards. The Study set's original program icons and names are trademarks of their owners, used here for
 personal study only.
 

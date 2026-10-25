@@ -350,6 +350,7 @@ filter	Installed	インストール済み
 # Tray (menu bar) menu and tooltip
 	Show ArtCraft Launcher	ArtCraft Launcher を表示
 	Check for Updates	更新を確認
+	Check for Launcher Updates…	ランチャーの更新を確認…
 	Visit getartcraft.com	getartcraft.com を開く
 	Visit witchmymac.com	witchmymac.com を開く
 	ArtCraft on GitHub	GitHub の ArtCraft
