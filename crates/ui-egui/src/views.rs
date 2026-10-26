@@ -240,6 +240,10 @@ impl LauncherUi {
                 });
             });
         }
+        // BetterCraft: the icon state and its "Check again" button, right under the toolbar.
+        if crate::bettercraft::fork() {
+            crate::bettercraft::status_bar(self, ui);
+        }
     }
 
     fn refresh_button(&mut self, ui: &mut Ui) {

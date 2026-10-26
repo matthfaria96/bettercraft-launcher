@@ -124,6 +124,13 @@ static STUDY: AtomicBool = AtomicBool::new(false);
 static LOADED: AtomicBool = AtomicBool::new(false);
 /// Set when the icon set changes in Settings: the next toolbar pass re-dresses the apps at once.
 static RESET: AtomicBool = AtomicBool::new(false);
+/// Set when an app finishes installing or updating: the next toolbar pass dresses it at once.
+static FORCE: AtomicBool = AtomicBool::new(false);
+/// The previous frame's icon-pass `busy`, to notice when a pass starts and ends.
+static WAS_BUSY: AtomicBool = AtomicBool::new(false);
+/// True while a user-triggered icon pass (a switch change or a finished install) is running, so
+/// the running "Changing icons…" line shows only for those, never for the routine 5-second check.
+static ACTIVE: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn mac_mode() -> MacMode {
     if CUSTOM.load(Ordering::Relaxed) { MacMode::Custom } else { MacMode::Clone }
@@ -185,14 +192,101 @@ pub(crate) fn custom_label() -> &'static str {
 
 /// The fork's toolbar control, drawn after upstream's refresh button. Also keeps the installed
 /// apps in step with the choice.
-pub(crate) fn toolbar(launcher: &LauncherUi, ui: &mut Ui) {
+pub(crate) fn toolbar(launcher: &mut LauncherUi, ui: &mut Ui) {
     load_choices();
-    let changed = mac_mode_picker(ui) | RESET.swap(false, Ordering::Relaxed);
+    let changed = mac_mode_picker(ui) | RESET.swap(false, Ordering::Relaxed) | FORCE.swap(false, Ordering::Relaxed);
     machine_icons::sync(launcher, changed);
     launcher_icon::sync_dock(ui.ctx(), icon_set());
+    icon_feedback(launcher, ui, changed);
     if machine_icons::status().busy {
         ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
     }
+}
+
+/// An app just finished installing or updating: with the icons on, the next toolbar pass dresses
+/// the new version at once (and that pass shows its feedback).
+pub(crate) fn note_installed() {
+    load_choices();
+    if mac_mode() == MacMode::Custom {
+        FORCE.store(true, Ordering::Relaxed);
+    }
+}
+
+/// Toasts for the icon pass: "Changing icons…" the moment the switch changes or an app finishes
+/// installing, and the result (or the error) when the pass ends. The routine 5-second re-check
+/// stays silent unless it actually changed something.
+fn icon_feedback(launcher: &mut LauncherUi, ui: &mut Ui, triggered: bool) {
+    if triggered {
+        ACTIVE.store(true, Ordering::Relaxed);
+        if !showcase() {
+            launcher.toast(ui.ctx(), say("Changing icons…", "Mudando os ícones…"), false);
+        }
+    }
+    let status = machine_icons::status();
+    let was = WAS_BUSY.swap(status.busy, Ordering::Relaxed);
+    if was && !status.busy {
+        ACTIVE.store(false, Ordering::Relaxed);
+        if !showcase() {
+            match &status.error {
+                Some(e) => launcher.toast(ui.ctx(), format!("{} {e}", say("Couldn't change some icons:", "Não consegui mudar alguns ícones:")), true),
+                None if status.changed > 0 => {
+                    launcher.toast(ui.ctx(), format!("{} {}/{}", say("Icons updated:", "Ícones atualizados:"), status.icons, status.total), false)
+                }
+                None => {}
+            }
+        }
+    }
+}
+
+/// A card under the toolbar, shown only while the icons are on: a dark well with the state centred
+/// and a centred "Check again" button that re-runs the patch. The state is live while a pass runs.
+pub(crate) fn status_bar(launcher: &mut LauncherUi, ui: &mut Ui) {
+    load_choices();
+    if mac_mode() != MacMode::Custom {
+        return;
+    }
+    let t = crate::theme::Tokens::get(ui.ctx());
+    let status = machine_icons::status();
+    let running = status.busy;
+    let (text, tone) = if running {
+        (format!("{} {}/{}", say("Changing icons…", "Mudando os ícones…"), status.icons, status.total), t.accent)
+    } else if let Some(error) = &status.error {
+        (format!("{} {error}", say("Couldn't change some icons:", "Não consegui mudar alguns ícones:")), t.bad)
+    } else if status.total == 0 {
+        (say("No installed apps to change.", "Nenhum app instalado para trocar.").to_string(), t.muted)
+    } else if status.icons == status.total {
+        (format!("{} {}/{}", say("All icons applied:", "Todos os ícones trocados:"), status.icons, status.total), t.good)
+    } else {
+        (format!("{} {}/{}", say("Icons applied:", "Ícones trocados:"), status.icons, status.total), t.warn)
+    };
+
+    egui::Frame::new()
+        .fill(t.sunken)
+        .stroke(t.hairline())
+        .corner_radius(egui::CornerRadius::ZERO)
+        .inner_margin(egui::Margin::symmetric(20, 14))
+        .show(ui, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.spacing_mut().item_spacing.y = 8.0;
+                let resp = ui.add(egui::Label::new(egui::RichText::new(&text).size(14.0).color(tone)).selectable(false));
+                if let Some(error) = &status.error {
+                    resp.on_hover_text(error);
+                }
+                if !running && widgets::button(ui, say("Check again", "Verificar de novo"), widgets::Kind::Primary, 0.0).clicked() {
+                    repatch(launcher, ui);
+                }
+            });
+        });
+}
+
+/// Runs the icon pass again now, whatever the state: re-applies the chosen icons to every app the
+/// pass can reach (it re-verifies each bundle and fixes the ones that are out of step).
+fn repatch(launcher: &mut LauncherUi, ui: &mut Ui) {
+    ACTIVE.store(true, Ordering::Relaxed);
+    if !showcase() {
+        launcher.toast(ui.ctx(), say("Changing icons…", "Mudando os ícones…"), false);
+    }
+    machine_icons::sync(launcher, true);
 }
 
 /// "Mac icons  [ Clone | New ]": whether the installed apps carry the launcher's icons in

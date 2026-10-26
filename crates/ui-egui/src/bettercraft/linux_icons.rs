@@ -37,6 +37,14 @@ pub(super) fn status() -> Status {
     status
 }
 
+/// Publishes the pass's running status so the toolbar can show live progress.
+fn publish(busy: bool, apps: &[(String, AppState)], total: usize, changed: usize, error: Option<String>) {
+    let icons = apps.iter().filter(|(_, s)| s.icons).count();
+    if let Ok(mut s) = STATUS.lock() {
+        *s = Some(Status { busy, icons, total, changed, error, apps: apps.to_vec() });
+    }
+}
+
 pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
     if !toggled && !due() {
         return;
@@ -62,19 +70,24 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
     if BUSY.swap(true, Ordering::AcqRel) {
         return;
     }
+    // Show the pass starting at once, before the thread's first publish.
+    publish(true, &[], apps.len(), 0, None);
     std::thread::spawn(move || {
         let mut error = None;
+        let mut changed = 0usize;
+        let mut states: Vec<(String, AppState)> = Vec::new();
         for (id, bundle_id, name) in &apps {
-            if let Err(e) = apply(id, bundle_id, name, mode, style) {
-                log::warn!("BetterCraft: couldn't change the icons of {name}: {e}");
-                error = Some(format!("{name}: {e}"));
+            match apply(id, bundle_id, name, mode, style) {
+                Ok(did) => changed += usize::from(did),
+                Err(e) => {
+                    log::warn!("BetterCraft: couldn't change the icons of {name}: {e}");
+                    error = Some(format!("{name}: {e}"));
+                }
             }
+            states.push((id.clone(), state_of(bundle_id)));
+            publish(true, &states, apps.len(), changed, error.clone());
         }
-        let states: Vec<(String, AppState)> = apps.iter().map(|(id, bundle_id, _)| (id.clone(), state_of(bundle_id))).collect();
-        let icons = states.iter().filter(|(_, s)| s.icons).count();
-        if let Ok(mut s) = STATUS.lock() {
-            *s = Some(Status { busy: false, icons, total: apps.len(), error, apps: states });
-        }
+        publish(false, &states, apps.len(), changed, error);
         BUSY.store(false, Ordering::Release);
     });
 }
@@ -97,15 +110,15 @@ fn state_of(bundle_id: &str) -> AppState {
     AppState { icons: true, names: key == IconSet::Study.key() }
 }
 
-/// Brings one app's entry and icon in line with `mode` and `style`.
-fn apply(id: &str, bundle_id: &str, app_name: &str, mode: MacMode, style: IconSet) -> Result<(), String> {
-    let Some(desktop) = desktop_path(bundle_id) else { return Ok(()) };
+/// Brings one app's entry and icon in line with `mode` and `style`. Returns whether it changed.
+fn apply(id: &str, bundle_id: &str, app_name: &str, mode: MacMode, style: IconSet) -> Result<bool, String> {
+    let Some(desktop) = desktop_path(bundle_id) else { return Ok(false) };
     if !desktop.exists() {
-        return Ok(());
+        return Ok(false);
     }
     let mut text = std::fs::read_to_string(&desktop).map_err(|e| e.to_string())?;
     if !is_ours(&text) {
-        return Ok(());
+        return Ok(false);
     }
 
     let want_custom = mode.icons();
@@ -116,7 +129,7 @@ fn apply(id: &str, bundle_id: &str, app_name: &str, mode: MacMode, style: IconSe
     let style_ok = style_of(&text) == want_style;
     let name_ok = field(&text, "Name") == Some(wanted_name.clone());
     if style_ok && name_ok {
-        return Ok(());
+        return Ok(false);
     }
 
     // Write the icon before the entry: if the icon write fails, the entry's marker is still
@@ -138,7 +151,7 @@ fn apply(id: &str, bundle_id: &str, app_name: &str, mode: MacMode, style: IconSe
     if !style_ok {
         refresh_icon_cache();
     }
-    Ok(())
+    Ok(true)
 }
 
 /// Writes the app's icon: the chosen set's (resized to 128 px) when dressing, the app's own

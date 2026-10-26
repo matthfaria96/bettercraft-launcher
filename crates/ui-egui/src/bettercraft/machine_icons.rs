@@ -34,6 +34,9 @@ pub(crate) struct Status {
     pub total: usize,
     /// Each installed app's id and what it carries, for the badge on its row.
     pub apps: Vec<(String, AppState)>,
+    /// Apps whose icon or name the last pass actually changed (0 on a pass that found everything
+    /// in place, so the UI can tell a real change from a routine re-check).
+    pub changed: usize,
     pub error: Option<String>,
 }
 
@@ -116,6 +119,14 @@ mod imp {
         status
     }
 
+    /// Publishes the pass's running status so the toolbar can show live progress.
+    fn publish(busy: bool, apps: &[(String, AppState)], total: usize, changed: usize, error: Option<String>) {
+        let icons = apps.iter().filter(|(_, s)| s.icons).count();
+        if let Ok(mut s) = STATUS.lock() {
+            *s = Some(Status { busy, icons, total, changed, error, apps: apps.to_vec() });
+        }
+    }
+
     pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
         if !toggled && !due() {
             return;
@@ -130,7 +141,7 @@ mod imp {
                 launcher.entries.iter().filter(|e| e.installed.is_some()).map(|e| (e.app.id.to_string(), state)).collect();
             let icons = if state.icons { apps.len() } else { 0 };
             if let Ok(mut s) = STATUS.lock() {
-                *s = Some(Status { busy: false, icons, total: apps.len(), error: None, apps });
+                *s = Some(Status { busy: false, icons, total: apps.len(), changed: 0, error: None, apps });
             }
             return;
         }
@@ -150,38 +161,37 @@ mod imp {
         if BUSY.swap(true, Ordering::AcqRel) {
             return;
         }
+        // Show the pass starting at once, before the thread's first publish.
+        publish(true, &[], apps.len(), 0, None);
         std::thread::spawn(move || {
             let mut error = None;
-            let mut dock_changed = false;
+            let mut changed = 0usize;
+            let mut states: Vec<(String, AppState)> = Vec::new();
             for (id, bundle) in &apps {
                 match apply(id, bundle, mode, style) {
-                    Ok(changed) => dock_changed |= changed,
+                    Ok(did) => changed += usize::from(did),
                     Err(e) => {
                         log::warn!("BetterCraft: couldn't change the icon of {}: {e}", bundle.display());
                         error = Some(format!("{}: {e}", bundle.display()));
                     }
                 }
+                let icons = has_custom_icon(bundle) && crate::bettercraft::dock_icon::is_patched(bundle);
+                states.push((id.clone(), AppState { icons, names: has_original_name(bundle) }));
+                publish(true, &states, apps.len(), changed, error.clone());
             }
             // The launcher's own bundle: the old logo as its Finder icon in Study, none in Normal.
             if let Err(e) = dress_launcher(set == IconSet::Study) {
                 log::warn!("BetterCraft: couldn't change the launcher's icon: {e}");
             }
-            // The Dock caches icons: restarting it (a second's blink) makes it read them again.
-            // A Craft App that is open keeps its old Dock icon until it is opened again.
-            if dock_changed {
-                let _ = Command::new("/usr/bin/killall").arg("Dock").status();
+            // Clear the icon caches and restart the Dock (which also draws Launchpad) so Finder,
+            // Launchpad and the Dock re-read the icons now instead of keeping the old pictures.
+            // A user-triggered pass (switch change, install, "Check again") always refreshes; a
+            // routine re-check only when it changed something. A Craft App that is open keeps its
+            // old Dock icon until it is opened again.
+            if toggled || changed > 0 {
+                refresh_display();
             }
-            let states: Vec<(String, AppState)> = apps
-                .iter()
-                .map(|(id, b)| {
-                    let icons = has_custom_icon(b) && crate::bettercraft::dock_icon::is_patched(b);
-                    (id.clone(), AppState { icons, names: has_original_name(b) })
-                })
-                .collect();
-            let icons = states.iter().filter(|(_, s)| s.icons).count();
-            if let Ok(mut s) = STATUS.lock() {
-                *s = Some(Status { busy: false, icons, total: apps.len(), error, apps: states });
-            }
+            publish(false, &states, apps.len(), changed, error);
             BUSY.store(false, Ordering::Release);
         });
     }
@@ -194,6 +204,26 @@ mod imp {
         }
         *last = Some(now);
         true
+    }
+
+    /// Clears macOS's icon caches, restarts the Dock (which also draws the native Launchpad) and
+    /// restarts third-party launchers that keep the icons cached in memory, so Finder, Launchpad,
+    /// the Dock and those launchers all re-read the icons now. Best effort: failures are ignored,
+    /// the pass itself already succeeded.
+    fn refresh_display() {
+        if let Some(home) = std::env::var_os("HOME") {
+            let caches = Path::new(&home).join("Library/Caches");
+            let _ = std::fs::remove_file(caches.join("com.apple.iconservices.store"));
+            let _ = std::fs::remove_dir_all(caches.join("com.apple.iconservices"));
+        }
+        // The native launcher: the Dock process also draws Launchpad.
+        let _ = Command::new("/usr/bin/killall").arg("Dock").status();
+        // LaunchOS keeps its own icon cache in memory: restart it (only when running) so it
+        // re-reads the icons through NSWorkspace.
+        let killed = Command::new("/usr/bin/killall").arg("LaunchOS").status().is_ok_and(|s| s.success());
+        if killed {
+            let _ = Command::new("/usr/bin/open").args(["-a", "LaunchOS"]).status();
+        }
     }
 
     fn has_custom_icon(bundle: &Path) -> bool {
@@ -221,6 +251,8 @@ mod imp {
         let want_names = mode.icons() && style.names();
         let names = want_names != has_original_name(bundle);
         let dock = mode.icons() != patched || restyle;
+        // Whether anything visible changes this pass (for the UI's feedback and the Dock refresh).
+        let mut changed = dock || names;
         if names || dock {
             // codesign refuses a bundle with a custom icon: clear it, sign, then put it back.
             if has_custom_icon(bundle) {
@@ -248,8 +280,9 @@ mod imp {
         }
         if mode.icons() != has_custom_icon(bundle) {
             set_icon(style, id, bundle, mode.icons())?;
+            changed = true;
         }
-        Ok(dock)
+        Ok(changed)
     }
 
     fn set_icon(style: IconSet, id: &str, bundle: &Path, on: bool) -> Result<(), String> {

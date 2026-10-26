@@ -113,16 +113,25 @@ fn icon_pair(ui: &Ui, id: &str, left_mid: egui::Pos2, in_colour: bool, row_fill:
     craft.union(original)
 }
 
-/// Whether this app carries the launcher's icon on this Mac: NEW / STUDY (green) or CLONE (red),
-/// one word so it never crowds the name; the tooltip says what exactly.
+/// Whether this app carries the launcher's icon on this Mac: NEW / STUDY (green), PENDING (amber,
+/// the icon should be changed but isn't yet) or ORIGINAL (the app's own icon, when Clone is on).
 fn mac_badge(ui: &mut Ui, id: &str, t: &Tokens) {
     let Some(state) = super::machine_icons::app_state(id) else { return };
-    let tip = match (state.icons, state.names) {
-        (true, true) => super::say("Study icon and name on this computer", "Ícone e nome de estudo neste computador"),
-        (true, false) => super::say("BetterCraft icon on this computer", "Ícone BetterCraft neste computador"),
-        (false, _) => super::say("The app's own icon on this computer", "Ícone do próprio app neste computador"),
+    let custom = super::mac_mode() == super::MacMode::Custom;
+    let (text, color, tip) = match (custom, state.icons, state.names) {
+        (true, true, true) => {
+            (super::custom_label(), t.good, super::say("Study icon and name on this computer", "Ícone e nome de estudo neste computador"))
+        }
+        (true, true, false) => (super::custom_label(), t.good, super::say("BetterCraft icon on this computer", "Ícone BetterCraft neste computador")),
+        (true, false, _) => (
+            super::say("Pending", "Pendente"),
+            t.warn,
+            super::say("The icon should be changed but isn't yet", "O ícone deveria estar trocado, mas ainda não está"),
+        ),
+        (false, _, _) => {
+            (super::say("Original", "Original"), t.muted, super::say("The app's own icon on this computer", "Ícone do próprio app neste computador"))
+        }
     };
-    let (text, color) = if state.icons { (super::custom_label(), t.good) } else { (super::say("Original", "Original"), t.bad) };
     widgets::badge(ui, text, color).on_hover_text(tip);
 }
 

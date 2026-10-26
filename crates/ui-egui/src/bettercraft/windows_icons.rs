@@ -85,6 +85,14 @@ pub(super) fn status() -> Status {
     status
 }
 
+/// Publishes the pass's running status so the toolbar can show live progress.
+fn publish(busy: bool, apps: &[(String, AppState)], total: usize, changed: usize, error: Option<String>) {
+    let icons = apps.iter().filter(|(_, s)| s.icons).count();
+    if let Ok(mut s) = STATUS.lock() {
+        *s = Some(Status { busy, icons, total, changed, error, apps: apps.to_vec() });
+    }
+}
+
 pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
     if !toggled && !due() {
         return;
@@ -106,24 +114,29 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
     if BUSY.swap(true, Ordering::AcqRel) {
         return;
     }
+    // Show the pass starting at once, before the thread's first publish.
+    publish(true, &[], apps.len(), 0, None);
     std::thread::spawn(move || {
         let mut error = None;
+        let mut changed = 0usize;
+        let mut states: Vec<(String, AppState)> = Vec::new();
         for (id, exe) in &apps {
-            if let Err(e) = apply(id, exe, mode, style) {
-                log::warn!("BetterCraft: couldn't change the shortcuts of {}: {e}", exe.display());
-                let e = if access_denied(&e) {
-                    format!("{e} (run BetterCraft Launcher as administrator to change apps installed for all users)")
-                } else {
-                    e
-                };
-                error = Some(format!("{}: {e}", exe.display()));
+            match apply(id, exe, mode, style) {
+                Ok(did) => changed += usize::from(did),
+                Err(e) => {
+                    log::warn!("BetterCraft: couldn't change the shortcuts of {}: {e}", exe.display());
+                    let e = if access_denied(&e) {
+                        format!("{e} (run BetterCraft Launcher as administrator to change apps installed for all users)")
+                    } else {
+                        e
+                    };
+                    error = Some(format!("{}: {e}", exe.display()));
+                }
             }
+            states.push((id.clone(), state_of(id)));
+            publish(true, &states, apps.len(), changed, error.clone());
         }
-        let states: Vec<(String, AppState)> = apps.iter().map(|(id, _)| (id.clone(), state_of(id))).collect();
-        let icons = states.iter().filter(|(_, s)| s.icons).count();
-        if let Ok(mut s) = STATUS.lock() {
-            *s = Some(Status { busy: false, icons, total: apps.len(), error, apps: states });
-        }
+        publish(false, &states, apps.len(), changed, error);
         BUSY.store(false, Ordering::Release);
     });
 }
@@ -171,23 +184,28 @@ fn state_of(id: &str) -> AppState {
     AppState { icons: true, names: marker.style == IconSet::Study.key() }
 }
 
-/// Brings one app's shortcuts in line with `mode` and `style`.
-fn apply(id: &str, exe: &Path, mode: MacMode, style: IconSet) -> Result<(), String> {
-    let Some(marker) = marker_path(id) else { return Ok(()) };
+/// Brings one app's shortcuts in line with `mode` and `style`. Returns whether anything changed.
+fn apply(id: &str, exe: &Path, mode: MacMode, style: IconSet) -> Result<bool, String> {
+    let Some(marker) = marker_path(id) else { return Ok(false) };
     let current = read_marker(&marker);
+    let mut changed = false;
     if mode.icons() {
         if let Some(cur) = &current {
             // An empty record (an app with no shortcuts yet) never counts as dressed: the next
             // pass lists again, so a shortcut that appears later is still caught.
             if !cur.shortcuts.is_empty() && cur.style == style.key() && cur.revision == super::assets::REVISION {
-                return Ok(());
+                return Ok(false);
             }
             if let Err(e) = revert(cur) {
                 log::warn!("BetterCraft: couldn't undo the previous icons of {id}: {e}");
             }
+            changed = true;
         }
         match apply_custom(id, exe, style)? {
-            Some(rec) => write_marker(&marker, &rec)?,
+            Some(rec) => {
+                write_marker(&marker, &rec)?;
+                changed = true;
+            }
             None => {
                 let _ = std::fs::remove_file(&marker);
             }
@@ -197,8 +215,9 @@ fn apply(id: &str, exe: &Path, mode: MacMode, style: IconSet) -> Result<(), Stri
             log::warn!("BetterCraft: couldn't undo the icons of {id}: {e}");
         }
         let _ = std::fs::remove_file(&marker);
+        changed = true;
     }
-    Ok(())
+    Ok(changed)
 }
 
 /// Dresses the shortcuts of `exe` in `style`; `None` when the app has no shortcuts to change.
@@ -270,12 +289,20 @@ fn list_shortcuts(exe: &Path) -> Result<Vec<(PathBuf, String)>, String> {
 }
 
 fn set_icon(lnk: &Path, icon: &str) -> Result<(), String> {
-    powershell(SET_ICON_SCRIPT, &[("BC_LNK", lnk.as_os_str()), ("BC_ICON", OsStr::new(icon_location(icon)))]).map(|_| ())
+    let location = icon_location(icon);
+    powershell(SET_ICON_SCRIPT, &[("BC_LNK", lnk.as_os_str()), ("BC_ICON", OsStr::new(location.as_str()))]).map(|_| ())
 }
 
-/// The value to hand `WScript.Shell` for an icon: `,0` (the target's own) for an empty one.
-fn icon_location(icon: &str) -> &str {
-    if icon.is_empty() { ",0" } else { icon }
+/// The value to hand `WScript.Shell` for an icon: `,0` (the target's own) for an empty one, and
+/// a bare path gets `,0` appended so the shell always reads the icon's first frame.
+fn icon_location(icon: &str) -> String {
+    if icon.is_empty() || icon == ",0" {
+        ",0".to_string()
+    } else if icon.contains(',') {
+        icon.to_string()
+    } else {
+        format!("{icon},0")
+    }
 }
 
 fn powershell(script: &str, env: &[(&str, &OsStr)]) -> Result<String, String> {
@@ -471,8 +498,9 @@ mod tests {
     #[test]
     fn an_empty_icon_location_means_the_targets_own_icon() {
         assert_eq!(icon_location(""), ",0");
-        assert_eq!(icon_location(r"C:\x\photocraft.exe,0"), r"C:\x\photocraft.exe,0");
         assert_eq!(icon_location(",0"), ",0");
+        assert_eq!(icon_location(r"C:\x\photocraft.exe,0"), r"C:\x\photocraft.exe,0");
+        assert_eq!(icon_location(r"C:\x\photocraft.ico"), r"C:\x\photocraft.ico,0");
     }
 
     #[test]

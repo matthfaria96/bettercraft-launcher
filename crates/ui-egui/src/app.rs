@@ -425,7 +425,13 @@ impl LauncherUi {
                 }
                 let kept = self.entry(&app).is_some_and(|e| e.ready);
                 match result {
-                    Ok(msg) => self.toast(ctx, msg, false),
+                    Ok(msg) => {
+                        self.toast(ctx, msg, false);
+                        // BetterCraft: dress the new version's icons at once when the icons are on.
+                        if !launcher {
+                            crate::bettercraft::note_installed();
+                        }
+                    }
                     // The paused card says it all.
                     Err(e) if e == PAUSED => {}
                     Err(e) if e == CANCELLED && launcher => self.toast(ctx, tl!("Update cancelled"), false),

@@ -1516,6 +1516,8 @@ fn the_drawer_and_the_enlarged_picture_survive_any_window_size() {
 
 #[test]
 fn the_rate_limit_notice_never_runs_under_the_footer_links() {
+    // Integration tests compile without cfg!(test), so pin English like the other harnesses do.
+    artcraft_launcher_ui_egui::i18n::set_test_lang(artcraft_launcher_ui_egui::i18n::Lang::EN);
     for width in [720.0, 960.0, 1180.0] {
         let mut evs = events();
         evs.push(Event::CheckFinished { at: NOW - 180, source: Source::GitHubApi, rate_limited_until: Some(NOW + 1800) });
@@ -1551,7 +1553,13 @@ fn the_rate_limit_notice_never_runs_under_the_footer_links() {
         // Everything on the footer's right: the website, GitHub and Discord icons and the social icons.
         let mut right = Vec::new();
         for label in ["Website", "GitHub", "Discord", "X", "YouTube", "TikTok", "Instagram", "LinkedIn"] {
-            right.extend(h.query_all_by_label(label).map(|n| n.rect()).filter(|r| (r.center().y - notice.center().y).abs() < 12.0));
+            right.extend(
+                h.query_all_by_label(label)
+                    .map(|n| n.rect())
+                    // The footer's icon links are ~25 px squares; card "GitHub" text links near
+                    // the bottom of the grid are ~14 px tall and must not count as footer links.
+                    .filter(|r| r.height() >= 20.0 && (r.center().y - notice.center().y).abs() < 12.0),
+            );
         }
         assert_eq!(right.len(), 8, "{width}: {right:?}");
         assert!(h.query_by_label_contains("Installing for").is_none(), "{width}: the footer no longer names the platform");
