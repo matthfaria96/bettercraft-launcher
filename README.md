@@ -51,11 +51,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/artcraft-launcher-grid.png" alt="ArtCraft Launcher on macOS in the grid view (dark theme): a card for each Craft App with its icon, status, version, release date and an Install or Open button" width="900">
+  <img src="docs/screenshots/artcraft-launcher-grid.png" alt="BetterCraft Launcher on macOS (dark theme): one row per Craft app with its redesigned icon, version and an Open, Install or Update button" width="900">
 </p>
 <p align="center">
-  <img src="docs/screenshots/artcraft-launcher-table.png" alt="The same apps in the table view (light theme), with columns for each app's status, installed and latest versions, and release date" width="900"><br>
-  <sub>Switch between the grid and a sortable table.</sub>
+  <img src="docs/screenshots/artcraft-launcher-table.png" alt="The same launcher in the light theme" width="900"><br>
+  <sub>Dark or light, following macOS.</sub>
 </p>
 
 ## What it does
