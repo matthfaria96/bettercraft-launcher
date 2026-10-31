@@ -28,12 +28,15 @@ const OWNED_KEY: &str = "X-ArtCraft-Launcher=true";
 const STYLE_KEY: &str = "X-BetterCraft-Style";
 
 static BUSY: AtomicBool = AtomicBool::new(false);
+/// Whether the running pass shows its progress: only one the user asked for (the switch, an
+/// install, "Check again"). The routine re-check runs out of sight, so the bar doesn't blink.
+static SHOWN: AtomicBool = AtomicBool::new(false);
 static LAST: Mutex<Option<Instant>> = Mutex::new(None);
 static STATUS: Mutex<Option<Status>> = Mutex::new(None);
 
 pub(super) fn status() -> Status {
     let mut status = STATUS.lock().ok().and_then(|s| s.clone()).unwrap_or_default();
-    status.busy = BUSY.load(Ordering::Acquire);
+    status.busy = BUSY.load(Ordering::Acquire) && SHOWN.load(Ordering::Acquire);
     status
 }
 
@@ -70,8 +73,11 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
     if BUSY.swap(true, Ordering::AcqRel) {
         return;
     }
+    SHOWN.store(toggled, Ordering::Release);
     // Show the pass starting at once, before the thread's first publish.
-    publish(true, &[], apps.len(), 0, None);
+    if toggled {
+        publish(true, &[], apps.len(), 0, None);
+    }
     std::thread::spawn(move || {
         let mut error = None;
         let mut changed = 0usize;
@@ -85,7 +91,9 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
                 }
             }
             states.push((id.clone(), state_of(bundle_id)));
-            publish(true, &states, apps.len(), changed, error.clone());
+            if toggled {
+                publish(true, &states, apps.len(), changed, error.clone());
+            }
         }
         publish(false, &states, apps.len(), changed, error);
         BUSY.store(false, Ordering::Release);

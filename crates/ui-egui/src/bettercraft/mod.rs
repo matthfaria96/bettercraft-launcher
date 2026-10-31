@@ -214,7 +214,7 @@ pub(crate) fn note_installed() {
 
 /// Toasts for the icon pass: "Changing icons…" the moment the switch changes or an app finishes
 /// installing, and the result (or the error) when the pass ends. The routine 5-second re-check
-/// stays silent unless it actually changed something.
+/// stays silent: its result only shows in the bar's count.
 fn icon_feedback(launcher: &mut LauncherUi, triggered: bool) {
     if triggered {
         ACTIVE.store(true, Ordering::Relaxed);

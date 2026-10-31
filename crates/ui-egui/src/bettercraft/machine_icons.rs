@@ -99,6 +99,9 @@ mod imp {
     const RECHECK: Duration = Duration::from_secs(5);
 
     static BUSY: AtomicBool = AtomicBool::new(false);
+    /// Whether the running pass shows its progress: only one the user asked for (the switch, an
+    /// install, "Check again"). The routine re-check runs out of sight, so the bar doesn't blink.
+    static SHOWN: AtomicBool = AtomicBool::new(false);
     static LAST: Mutex<Option<Instant>> = Mutex::new(None);
     static STATUS: Mutex<Option<Status>> = Mutex::new(None);
 
@@ -115,7 +118,7 @@ mod imp {
 
     pub(super) fn status() -> Status {
         let mut status = STATUS.lock().ok().and_then(|s| s.clone()).unwrap_or_default();
-        status.busy = BUSY.load(Ordering::Acquire);
+        status.busy = BUSY.load(Ordering::Acquire) && SHOWN.load(Ordering::Acquire);
         status
     }
 
@@ -161,8 +164,11 @@ mod imp {
         if BUSY.swap(true, Ordering::AcqRel) {
             return;
         }
+        SHOWN.store(toggled, Ordering::Release);
         // Show the pass starting at once, before the thread's first publish.
-        publish(true, &[], apps.len(), 0, None);
+        if toggled {
+            publish(true, &[], apps.len(), 0, None);
+        }
         std::thread::spawn(move || {
             let mut error = None;
             let mut changed = 0usize;
@@ -177,7 +183,9 @@ mod imp {
                 }
                 let icons = has_custom_icon(bundle) && crate::bettercraft::dock_icon::is_patched(bundle);
                 states.push((id.clone(), AppState { icons, names: has_original_name(bundle) }));
-                publish(true, &states, apps.len(), changed, error.clone());
+                if toggled {
+                    publish(true, &states, apps.len(), changed, error.clone());
+                }
             }
             // The launcher's own bundle: the old logo as its Finder icon in Study, none in Normal.
             if let Err(e) = dress_launcher(set == IconSet::Study) {
