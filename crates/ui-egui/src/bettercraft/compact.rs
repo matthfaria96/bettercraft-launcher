@@ -137,7 +137,7 @@ fn mac_badge(ui: &mut Ui, id: &str, t: &Tokens) {
 
 /// One quiet line: the version when all is well, the status (in its tone) when something is up.
 fn status_line(entry: &AppEntry, status: &AppStatus, manage_apps: bool, t: &Tokens) -> (String, egui::Color32) {
-    let version = crate::card_parts::strip_version(entry, status);
+    let version: String = crate::card_parts::strip_version(entry, status, None).into_iter().map(|(text, _)| text).collect();
     match status {
         AppStatus::UpToDate | AppStatus::Installed if !version.is_empty() => (version, t.muted),
         // The button already says "Update to…": the line only shows from and to.

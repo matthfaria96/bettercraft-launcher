@@ -197,7 +197,7 @@ pub(crate) fn toolbar(launcher: &mut LauncherUi, ui: &mut Ui) {
     let changed = mac_mode_picker(ui) | RESET.swap(false, Ordering::Relaxed) | FORCE.swap(false, Ordering::Relaxed);
     machine_icons::sync(launcher, changed);
     launcher_icon::sync_dock(ui.ctx(), icon_set());
-    icon_feedback(launcher, ui, changed);
+    icon_feedback(launcher, changed);
     if machine_icons::status().busy {
         ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
     }
@@ -215,11 +215,11 @@ pub(crate) fn note_installed() {
 /// Toasts for the icon pass: "Changing icons…" the moment the switch changes or an app finishes
 /// installing, and the result (or the error) when the pass ends. The routine 5-second re-check
 /// stays silent unless it actually changed something.
-fn icon_feedback(launcher: &mut LauncherUi, ui: &mut Ui, triggered: bool) {
+fn icon_feedback(launcher: &mut LauncherUi, triggered: bool) {
     if triggered {
         ACTIVE.store(true, Ordering::Relaxed);
         if !showcase() {
-            launcher.toast(ui.ctx(), say("Changing icons…", "Mudando os ícones…"), false);
+            launcher.toast_from_ui(say("Changing icons…", "Mudando os ícones…"), false);
         }
     }
     let status = machine_icons::status();
@@ -228,9 +228,9 @@ fn icon_feedback(launcher: &mut LauncherUi, ui: &mut Ui, triggered: bool) {
         ACTIVE.store(false, Ordering::Relaxed);
         if !showcase() {
             match &status.error {
-                Some(e) => launcher.toast(ui.ctx(), format!("{} {e}", say("Couldn't change some icons:", "Não consegui mudar alguns ícones:")), true),
+                Some(e) => launcher.toast(format!("{} {e}", say("Couldn't change some icons:", "Não consegui mudar alguns ícones:")), true),
                 None if status.changed > 0 => {
-                    launcher.toast(ui.ctx(), format!("{} {}/{}", say("Icons updated:", "Ícones atualizados:"), status.icons, status.total), false)
+                    launcher.toast(format!("{} {}/{}", say("Icons updated:", "Ícones atualizados:"), status.icons, status.total), false)
                 }
                 None => {}
             }
@@ -273,7 +273,7 @@ pub(crate) fn status_bar(launcher: &mut LauncherUi, ui: &mut Ui) {
                     resp.on_hover_text(error);
                 }
                 if !running && widgets::button(ui, say("Check again", "Verificar de novo"), widgets::Kind::Primary, 0.0).clicked() {
-                    repatch(launcher, ui);
+                    repatch(launcher);
                 }
             });
         });
@@ -281,10 +281,10 @@ pub(crate) fn status_bar(launcher: &mut LauncherUi, ui: &mut Ui) {
 
 /// Runs the icon pass again now, whatever the state: re-applies the chosen icons to every app the
 /// pass can reach (it re-verifies each bundle and fixes the ones that are out of step).
-fn repatch(launcher: &mut LauncherUi, ui: &mut Ui) {
+fn repatch(launcher: &mut LauncherUi) {
     ACTIVE.store(true, Ordering::Relaxed);
     if !showcase() {
-        launcher.toast(ui.ctx(), say("Changing icons…", "Mudando os ícones…"), false);
+        launcher.toast_from_ui(say("Changing icons…", "Mudando os ícones…"), false);
     }
     machine_icons::sync(launcher, true);
 }
