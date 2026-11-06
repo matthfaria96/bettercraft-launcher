@@ -8,9 +8,20 @@
 //! Each comes as the `.icns` for the bundle, a 256 px PNG (the launcher's rows and roomy embedded
 //! icons), a PNG that fits eframe's default icon (the Dock), and 96 / 64 px PNGs.
 
-/// Bumped whenever the pictures change: installed apps carrying an older revision are re-dressed.
+/// The revision of `id`'s picture in `set`: a fingerprint (FNV-1a) of its 256 px PNG, which
+/// `scripts/make-icon-set.sh` renders with every other size. An installed app carrying another
+/// revision is re-dressed, so a redesigned icon reaches the installed apps on its own, with no
+/// number to bump; only the apps whose picture changed are touched.
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) const REVISION: u32 = 3;
+pub(crate) fn revision(set: IconSet, id: &str) -> u32 {
+    png256(set, id).unwrap_or_default().iter().fold(0x811c_9dc5_u32, |h, b| (h ^ u32::from(*b)).wrapping_mul(0x0100_0193))
+}
+
+/// Whether `set` has an icon for `id`. An app it doesn't cover yet (one upstream has just added)
+/// keeps its own icon: the passes leave it alone and its row says so, with no error.
+pub(crate) fn has(set: IconSet, id: &str) -> bool {
+    png256(set, id).is_some()
+}
 
 /// Which icons (and names) the installed apps get.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -255,7 +266,8 @@ pub(crate) fn png64(set: IconSet, id: &str) -> Option<&'static [u8]> {
 
 #[cfg(test)]
 mod tests {
-    use super::{IconSet, image, png256};
+    use super::{IconSet, has, image, png256, revision};
+    use crate::bettercraft::MacMode;
 
     #[test]
     fn every_app_has_both_sets() {
@@ -280,5 +292,24 @@ mod tests {
             assert_eq!(IconSet::from_key(set.key()), Some(set));
         }
         assert_eq!(IconSet::from_key("craft"), Some(IconSet::Study));
+    }
+
+    #[test]
+    fn an_app_without_an_icon_keeps_its_own() {
+        // An app upstream has just added, which no BetterCraft set covers yet.
+        for set in IconSet::ALL {
+            assert!(!has(set, "a-new-upstream-app"));
+            assert_eq!(MacMode::Custom.for_app(set, "a-new-upstream-app"), MacMode::Clone);
+            assert_eq!(MacMode::Custom.for_app(set, "photocraft"), MacMode::Custom);
+            assert_eq!(MacMode::Clone.for_app(set, "photocraft"), MacMode::Clone);
+        }
+    }
+
+    #[test]
+    fn the_revision_follows_the_picture() {
+        let photo = revision(IconSet::Craft, "photocraft");
+        assert_eq!(photo, revision(IconSet::Craft, "photocraft"));
+        assert_ne!(photo, revision(IconSet::Study, "photocraft"));
+        assert_ne!(photo, revision(IconSet::Craft, "filmcraft"));
     }
 }

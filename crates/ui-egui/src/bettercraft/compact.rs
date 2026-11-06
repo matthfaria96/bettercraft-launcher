@@ -114,10 +114,19 @@ fn icon_pair(ui: &Ui, id: &str, left_mid: egui::Pos2, in_colour: bool, row_fill:
 }
 
 /// Whether this app carries the launcher's icon on this Mac: NEW / STUDY (green), PENDING (amber,
-/// the icon should be changed but isn't yet) or ORIGINAL (the app's own icon, when Clone is on).
+/// the icon should be changed but isn't yet), NO NEW ICON YET (an app the chosen set doesn't cover,
+/// such as one upstream has just added: it keeps its own icon) or ORIGINAL (the app's own icon,
+/// when Clone is on).
 fn mac_badge(ui: &mut Ui, id: &str, t: &Tokens) {
-    let Some(state) = super::machine_icons::app_state(id) else { return };
     let custom = super::mac_mode() == super::MacMode::Custom;
+    if custom && !super::assets::has(super::icon_set(), id) {
+        widgets::badge(ui, super::say("No new icon yet", "Sem ícone novo ainda"), t.muted).on_hover_text(super::say(
+            "BetterCraft has no icon for this app yet: it keeps its own until one is added",
+            "O BetterCraft ainda não tem ícone para este app: ele fica com o próprio até um ser adicionado",
+        ));
+        return;
+    }
+    let Some(state) = super::machine_icons::app_state(id) else { return };
     let (text, color, tip) = match (custom, state.icons, state.names) {
         (true, true, true) => {
             (super::custom_label(), t.good, super::say("Study icon and name on this computer", "Ícone e nome de estudo neste computador"))

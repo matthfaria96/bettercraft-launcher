@@ -139,12 +139,19 @@ mod imp {
         let set = style;
         if crate::bettercraft::showcase() {
             // Screenshots: show the badges the choice would give, change nothing on disk.
-            let state = AppState { icons: mode.icons(), names: mode.icons() && style.names() };
-            let apps: Vec<(String, AppState)> =
-                launcher.entries.iter().filter(|e| e.installed.is_some()).map(|e| (e.app.id.to_string(), state)).collect();
-            let icons = if state.icons { apps.len() } else { 0 };
+            let apps: Vec<(String, AppState)> = launcher
+                .entries
+                .iter()
+                .filter(|e| e.installed.is_some())
+                .map(|e| {
+                    let on = mode.for_app(style, e.app.id).icons();
+                    (e.app.id.to_string(), AppState { icons: on, names: on && style.names() })
+                })
+                .collect();
+            let icons = apps.iter().filter(|(_, s)| s.icons).count();
+            let total = apps.iter().filter(|(id, _)| super::super::assets::has(style, id)).count();
             if let Ok(mut s) = STATUS.lock() {
-                *s = Some(Status { busy: false, icons, total: apps.len(), changed: 0, error: None, apps });
+                *s = Some(Status { busy: false, icons, total, changed: 0, error: None, apps });
             }
             return;
         }
@@ -165,16 +172,18 @@ mod imp {
             return;
         }
         SHOWN.store(toggled, Ordering::Release);
+        // The count leaves out apps the chosen set has no icon for yet: they keep their own.
+        let total = apps.iter().filter(|(id, _)| crate::bettercraft::assets::has(style, id)).count();
         // Show the pass starting at once, before the thread's first publish.
         if toggled {
-            publish(true, &[], apps.len(), 0, None);
+            publish(true, &[], total, 0, None);
         }
         std::thread::spawn(move || {
             let mut error = None;
             let mut changed = 0usize;
             let mut states: Vec<(String, AppState)> = Vec::new();
             for (id, bundle) in &apps {
-                match apply(id, bundle, mode, style) {
+                match apply(id, bundle, mode.for_app(style, id), style) {
                     Ok(did) => changed += usize::from(did),
                     Err(e) => {
                         log::warn!("BetterCraft: couldn't change the icon of {}: {e}", bundle.display());
@@ -184,7 +193,7 @@ mod imp {
                 let icons = has_custom_icon(bundle) && crate::bettercraft::dock_icon::is_patched(bundle);
                 states.push((id.clone(), AppState { icons, names: has_original_name(bundle) }));
                 if toggled {
-                    publish(true, &states, apps.len(), changed, error.clone());
+                    publish(true, &states, total, changed, error.clone());
                 }
             }
             // The launcher's own bundle: the old logo as its Finder icon in Study, none in Normal.
@@ -199,7 +208,7 @@ mod imp {
             if toggled || changed > 0 {
                 refresh_display();
             }
-            publish(false, &states, apps.len(), changed, error);
+            publish(false, &states, total, changed, error);
             BUSY.store(false, Ordering::Release);
         });
     }
@@ -254,7 +263,7 @@ mod imp {
         let marker = std::fs::read_to_string(style_marker(bundle)).unwrap_or_default();
         let (key, revision) = marker.trim().split_once(':').unwrap_or((marker.trim(), "1"));
         let carried = IconSet::from_key(key).unwrap_or_default();
-        let current = revision == crate::bettercraft::assets::REVISION.to_string();
+        let current = revision == crate::bettercraft::assets::revision(style, id).to_string();
         let restyle = mode.icons() && patched && (carried != style || !current);
         let want_names = mode.icons() && style.names();
         let names = want_names != has_original_name(bundle);
@@ -279,7 +288,7 @@ mod imp {
                 }
                 if mode.icons() {
                     dock_icon::set(style, id, bundle, true)?;
-                    std::fs::write(style_marker(bundle), format!("{}:{}", style.key(), crate::bettercraft::assets::REVISION))
+                    std::fs::write(style_marker(bundle), format!("{}:{}", style.key(), crate::bettercraft::assets::revision(style, id)))
                         .map_err(|e| e.to_string())?;
                 }
             }

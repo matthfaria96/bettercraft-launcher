@@ -20,6 +20,17 @@ What it adds:
   desktop on Windows, or in the applications menu and dock on Linux (AppImages); the apps keep
   their names. *Clone* puts each app's own icon back. Each installed row shows NEW (green) or
   CLONE (red).
+- **Apps without a BetterCraft icon yet** (one upstream has just added, such as TextureCraft,
+  MaterialCraft or Craft Anything) keep their own icon, updated with every upstream sync, and
+  their row says "No new icon yet": no error, no endless "Pending", and the toolbar's count
+  leaves them out. To give one an icon, add its `<App>_512.png` to `assets/craft-icons/src/`
+  (and `assets/study-icons/src/` for Study), run `scripts/make-craft-icons.sh` /
+  `scripts/make-study-icons.sh`, and add its rows to the tables in
+  `crates/ui-egui/src/bettercraft/assets.rs` (plus `icons.rs` for a Study name).
+- **Icon updates reach installed apps by themselves.** Each dressed app records a fingerprint
+  of the picture it got; when a BetterCraft icon is redesigned, the next pass re-dresses just
+  the apps whose picture changed. The upstream icons (`assets/app-icons/`) arrive with the sync
+  and are never edited here, so the custom BetterCraft icons are never overwritten by them.
 - **Settings → Icons: Normal | Study** (two cards with previews): *Normal* is the official look
   above. *Study* (unofficial, for testing) uses the original programs' icons with a yellow CRAFT
   corner ribbon (`assets/study-icons/`, from `scripts/make-study-icons.sh`) and shows the original

@@ -74,16 +74,18 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
         return;
     }
     SHOWN.store(toggled, Ordering::Release);
+    // The count leaves out apps the chosen set has no icon for yet: they keep their own.
+    let total = apps.iter().filter(|a| super::assets::has(style, &a.0)).count();
     // Show the pass starting at once, before the thread's first publish.
     if toggled {
-        publish(true, &[], apps.len(), 0, None);
+        publish(true, &[], total, 0, None);
     }
     std::thread::spawn(move || {
         let mut error = None;
         let mut changed = 0usize;
         let mut states: Vec<(String, AppState)> = Vec::new();
         for (id, bundle_id, name) in &apps {
-            match apply(id, bundle_id, name, mode, style) {
+            match apply(id, bundle_id, name, mode.for_app(style, id), style) {
                 Ok(did) => changed += usize::from(did),
                 Err(e) => {
                     log::warn!("BetterCraft: couldn't change the icons of {name}: {e}");
@@ -92,10 +94,10 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
             }
             states.push((id.clone(), state_of(bundle_id)));
             if toggled {
-                publish(true, &states, apps.len(), changed, error.clone());
+                publish(true, &states, total, changed, error.clone());
             }
         }
-        publish(false, &states, apps.len(), changed, error);
+        publish(false, &states, total, changed, error);
         BUSY.store(false, Ordering::Release);
     });
 }
@@ -131,7 +133,7 @@ fn apply(id: &str, bundle_id: &str, app_name: &str, mode: MacMode, style: IconSe
 
     let want_custom = mode.icons();
     let want_names = want_custom && style.names();
-    let want_style = want_custom.then(|| (style.key().to_string(), super::assets::REVISION));
+    let want_style = want_custom.then(|| (style.key().to_string(), super::assets::revision(style, id)));
     let wanted_name = if want_names { super::icons::name(id).unwrap_or(app_name).to_string() } else { app_name.to_string() };
 
     let style_ok = style_of(&text) == want_style;

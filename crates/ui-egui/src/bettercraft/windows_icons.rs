@@ -118,16 +118,18 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
         return;
     }
     SHOWN.store(toggled, Ordering::Release);
+    // The count leaves out apps the chosen set has no icon for yet: they keep their own.
+    let total = apps.iter().filter(|a| super::assets::has(style, &a.0)).count();
     // Show the pass starting at once, before the thread's first publish.
     if toggled {
-        publish(true, &[], apps.len(), 0, None);
+        publish(true, &[], total, 0, None);
     }
     std::thread::spawn(move || {
         let mut error = None;
         let mut changed = 0usize;
         let mut states: Vec<(String, AppState)> = Vec::new();
         for (id, exe) in &apps {
-            match apply(id, exe, mode, style) {
+            match apply(id, exe, mode.for_app(style, id), style) {
                 Ok(did) => changed += usize::from(did),
                 Err(e) => {
                     log::warn!("BetterCraft: couldn't change the shortcuts of {}: {e}", exe.display());
@@ -141,10 +143,10 @@ pub(super) fn sync(launcher: &LauncherUi, toggled: bool) {
             }
             states.push((id.clone(), state_of(id)));
             if toggled {
-                publish(true, &states, apps.len(), changed, error.clone());
+                publish(true, &states, total, changed, error.clone());
             }
         }
-        publish(false, &states, apps.len(), changed, error);
+        publish(false, &states, total, changed, error);
         BUSY.store(false, Ordering::Release);
     });
 }
@@ -201,7 +203,7 @@ fn apply(id: &str, exe: &Path, mode: MacMode, style: IconSet) -> Result<bool, St
         if let Some(cur) = &current {
             // An empty record (an app with no shortcuts yet) never counts as dressed: the next
             // pass lists again, so a shortcut that appears later is still caught.
-            if !cur.shortcuts.is_empty() && cur.style == style.key() && cur.revision == super::assets::REVISION {
+            if !cur.shortcuts.is_empty() && cur.style == style.key() && cur.revision == super::assets::revision(style, id) {
                 return Ok(false);
             }
             if let Err(e) = revert(cur) {
@@ -251,7 +253,7 @@ fn apply_custom(id: &str, exe: &Path, style: IconSet) -> Result<Option<Marker>, 
         };
         records.push(Shortcut { path: final_path, name: original_name, icon: current_icon });
     }
-    Ok(Some(Marker { style: style.key().to_string(), revision: super::assets::REVISION, shortcuts: records }))
+    Ok(Some(Marker { style: style.key().to_string(), revision: super::assets::revision(style, id), shortcuts: records }))
 }
 
 /// Puts back every original icon and name the marker recorded.

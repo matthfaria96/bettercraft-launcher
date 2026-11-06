@@ -114,6 +114,13 @@ impl MacMode {
     pub(crate) fn icons(self) -> bool {
         self == Self::Custom
     }
+
+    /// The mode app `id` gets: Custom only where `set` has its icon. An app the set doesn't
+    /// cover yet is treated as Clone, so it keeps (or gets back) its own icon and name.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn for_app(self, set: assets::IconSet, id: &str) -> Self {
+        if assets::has(set, id) { self } else { Self::Clone }
+    }
 }
 
 const MODE_KEY: &str = "bettercraft-mac-mode";
