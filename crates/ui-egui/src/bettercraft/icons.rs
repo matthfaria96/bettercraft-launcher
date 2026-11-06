@@ -4,6 +4,7 @@
 use egui::ImageSource;
 
 /// The original program's name for a Craft App id, as Finder, Launchpad and the Dock show it.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn name(id: &str) -> Option<&'static str> {
     Some(match id {
         "photocraft" => "Adobe Photoshop",

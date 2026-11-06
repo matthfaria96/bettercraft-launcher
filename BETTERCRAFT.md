@@ -2,7 +2,9 @@
 
 A fork of [storytold/craft-launcher](https://github.com/storytold/craft-launcher) that stays in step
 with it (`.github/workflows/bettercraft-sync.yml` merges upstream every 6 hours; or run
-`scripts/sync-upstream.sh`). The BetterCraft build keeps only what matters: install apps, update them, and set their icons
+`scripts/sync-upstream.sh`). A merge lands on `main` only if it passes `scripts/check.sh`, the same
+checks CI runs (run it before every push too); a conflict, failing check or refused push opens one
+"Upstream sync needs a hand" issue instead of a failed run every 6 hours. The BetterCraft build keeps only what matters: install apps, update them, and set their icons
 and names (on macOS, Windows and Linux). It drops upstream's noise (app pages, release notes, announcements, social links,
 search, sort, the grid/table switch) and upstream's launcher self-update, which would replace this
 fork with ArtCraft Launcher; update the fork with `scripts/sync-upstream.sh` and
@@ -148,7 +150,7 @@ with `assets/bettercraft/logo-normal.icns` as its icon, `~/Documents/witchmymac-
 `make-dmg.sh`, then `make-appcast-item.sh` (see `~/Documents/witchmymac-release/UPDATES.md`).
 
 Fork-only files: `crates/ui-egui/src/bettercraft/`, `assets/craft-icons/`, `assets/study-icons/`,
-`assets/bettercraft/`, `scripts/`, `packaging/macos/updater/`, `apps/artcraft-launcher/src/updater.rs`, this file and the sync workflow. Upstream files touched: small
+`assets/bettercraft/`, `scripts/` (including `check.sh`), `packaging/macos/updater/`, `apps/artcraft-launcher/src/updater.rs`, this file and the sync workflow. Upstream files touched: small
 hooks in `lib.rs`, `views.rs`, `app.rs` (no upstream self-update) and `settings_dialog.rs`, the tray item (`tray.rs`, `main.rs`), the Sparkle keys in `Info.plist.in` and the helper call in `package.sh`, plus the `upstream-look` feature in `crates/ui-egui/Cargo.toml` so
 upstream's UI tests keep checking upstream's cards. The Study set's original program icons and names are trademarks of their owners, used here for
 personal study only.

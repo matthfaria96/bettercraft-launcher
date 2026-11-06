@@ -9,6 +9,7 @@
 //! icons), a PNG that fits eframe's default icon (the Dock), and 96 / 64 px PNGs.
 
 /// Bumped whenever the pictures change: installed apps carrying an older revision are re-dressed.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) const REVISION: u32 = 3;
 
 /// Which icons (and names) the installed apps get.
@@ -43,6 +44,7 @@ impl IconSet {
     }
 
     /// Whether this set also gives the apps the original programs' names.
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn names(self) -> bool {
         self == Self::Study
     }

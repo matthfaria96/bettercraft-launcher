@@ -110,6 +110,7 @@ pub(crate) enum MacMode {
 }
 
 impl MacMode {
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn icons(self) -> bool {
         self == Self::Custom
     }
@@ -439,6 +440,6 @@ fn set_card(ui: &mut Ui, set: IconSet, chosen: bool, title: &str, tag: &str, tex
     y += title_h + 18.0;
     let text_g = p.layout(text.to_string(), FontId::proportional(12.0), t.muted, rect.width() - 28.0);
     p.galley(pos2(left, y), text_g, t.muted);
-    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::RadioButton, true, chosen, title));
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::RadioButton, true, chosen, title));
     resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked()
 }

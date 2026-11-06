@@ -75,6 +75,9 @@ impl Demo {
                 // Never a real bundle: the showcase icon pass reads no files.
                 location: format!("/BetterCraft Showcase/{name}.app"),
                 package: None,
+                externally_managed: false,
+                origin: None,
+                installation: None,
             });
             events.push(Event::Detected { app: (*id).into(), installed });
         }

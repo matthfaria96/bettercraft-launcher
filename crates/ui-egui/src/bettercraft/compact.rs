@@ -91,7 +91,7 @@ fn row_ui(launcher: &mut LauncherUi, ui: &mut Ui, id: &str, rect: Rect) {
         egui::UiBuilder::new().max_rect(actions).layout(egui::Layout::left_to_right(egui::Align::Center).with_main_align(egui::Align::Max)),
     );
     // No website/GitHub/releases links in the menu: download, update, open and remove only.
-    launcher.actions_in(&mut actions_ui, &entry, &status, actions_w, false);
+    launcher.actions_in(&mut actions_ui, &entry, &status, actions_w, crate::views::Place::Details);
 }
 
 /// The Craft icon, small and behind, and the original program's icon it gets on this Mac, larger

@@ -1,5 +1,10 @@
-# BetterCraft: merge storytold/craft-launcher into main every day. The fork's own code is
-# crates/ui-egui/src/better_icons.rs, assets/better-icons/ and a 3-line hook, so merges are clean.
+# BetterCraft: merge storytold/craft-launcher into main every 6 hours, landing only a merge that
+# passes the same checks as CI (scripts/check.sh), so main never goes red from a sync.
+#
+# A conflict, a failing check or a refused push does not fail this run every 6 hours: it opens a
+# single issue ("Upstream sync needs a hand") and stays quiet while that issue is open. The next
+# sync that lands (or finds main already up to date) closes it. Fix by hand on a Mac with
+# scripts/sync-upstream.sh.
 name: BetterCraft upstream sync
 on:
   schedule:
@@ -7,31 +12,120 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  issues: write
+concurrency:
+  group: bettercraft-sync
+  cancel-in-progress: false
 jobs:
   sync:
     if: github.repository != 'storytold/craft-launcher'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_TITLE: Upstream sync needs a hand
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.SYNC_TOKEN || github.token }}
+
       - name: Merge upstream
+        id: merge
         run: |
           git config user.name "BetterCraft Sync"
           git config user.email "bettercraft-sync@users.noreply.github.com"
           git remote add upstream https://github.com/storytold/craft-launcher.git
           git fetch upstream main
+          echo "upstream=$(git rev-parse --short upstream/main)" >> "$GITHUB_OUTPUT"
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "state=current" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # Dependabot stays off in the fork (dependency bumps arrive from upstream), so a change
           # upstream makes to its config is dropped instead of stopping the merge.
           if ! git merge --no-edit upstream/main; then
-            if [ "$(git diff --name-only --diff-filter=U)" = ".github/dependabot.yml" ]; then
+            conflicts=$(git diff --name-only --diff-filter=U)
+            if [ "$conflicts" = ".github/dependabot.yml" ]; then
               git rm -q .github/dependabot.yml
               git commit --no-edit
             else
-              exit 1
+              git merge --abort
+              {
+                echo "state=conflict"
+                echo "conflicts<<EOF"
+                echo "$conflicts"
+                echo "EOF"
+              } >> "$GITHUB_OUTPUT"
+              exit 0
             fi
           fi
           git rm -q --ignore-unmatch .github/dependabot.yml
           git diff --cached --quiet || git commit -m "chore: keep Dependabot off in the fork"
-          git push origin HEAD:main
+          echo "state=merged" >> "$GITHUB_OUTPUT"
+
+      - name: Linux build headers
+        if: steps.merge.outputs.state == 'merged'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+
+      - name: Rust toolchain
+        if: steps.merge.outputs.state == 'merged'
+        run: |
+          rustup toolchain install stable --profile minimal -c clippy,rustfmt -t wasm32-unknown-unknown
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        if: steps.merge.outputs.state == 'merged'
+
+      - name: Check the merge as CI does
+        id: check
+        if: steps.merge.outputs.state == 'merged'
+        continue-on-error: true
+        run: scripts/check.sh
+
+      - name: Land on main
+        id: land
+        if: steps.merge.outputs.state == 'merged' && steps.check.outcome == 'success'
+        continue-on-error: true
+        run: git push origin HEAD:main
+
+      - name: Open or close the sync issue
+        if: always()
+        env:
+          STATE: ${{ steps.merge.outputs.state }}
+          UPSTREAM: ${{ steps.merge.outputs.upstream }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+          CHECK: ${{ steps.check.outcome }}
+          LAND: ${{ steps.land.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          problem=""
+          # shellcheck disable=SC2016 # the backticks are Markdown, not command substitution
+          if [ "$STATE" = conflict ]; then
+            problem="Merging upstream \`$UPSTREAM\` conflicts in:
+          $(printf '%s\n' "$CONFLICTS" | sed 's/^/- `/; s/$/`/')"
+          elif [ "$STATE" = merged ] && [ "$CHECK" != success ]; then
+            problem="The merge with upstream \`$UPSTREAM\` fails the CI checks (\`scripts/check.sh\`): see the run log."
+          elif [ "$STATE" = merged ] && [ "$LAND" != success ]; then
+            problem="The merge with upstream \`$UPSTREAM\` passes the checks, but GitHub refused the push. Usually upstream changed a file under \`.github/workflows/\`, which the default token may not push: add a \`SYNC_TOKEN\` secret (a fine-grained token on this repo with Contents and Workflows: read and write) or sync by hand."
+          elif [ -z "$STATE" ]; then
+            problem="The sync could not fetch or merge upstream: see the run log."
+          fi
+          existing=$(gh issue list --state open --json number,title --jq 'map(select(.title == env.ISSUE_TITLE)) | .[0].number // empty')
+          if [ -z "$problem" ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" --comment "main is in step with upstream \`$UPSTREAM\` again."
+            fi
+            exit 0
+          fi
+          echo "::warning::$problem"
+          # Already open: stay quiet, one notification per problem.
+          [ -n "$existing" ] && exit 0
+          gh issue create --title "$ISSUE_TITLE" --body "$problem
+
+          Run: $RUN_URL
+
+          Main is untouched. To fix it on the Mac: \`scripts/sync-upstream.sh\` merges upstream and
+          stops at the conflict or the failing check; fix, commit, run \`scripts/check.sh\`, then
+          \`git push origin HEAD:main\`. The next sync closes this issue."

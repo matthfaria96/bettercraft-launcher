@@ -6227,6 +6227,7 @@ version = "0.6.6"
 dependencies = [
  "jiff",
  "semver",
+ "tempfile",
 ]
 
 [[package]]
